@@ -9,24 +9,19 @@ export default function ProfileSection({ usuario = {} }) {
     fecha_nacimiento = usuario.fechaNacimiento || usuario.fecha_nacimiento || '',
     telefono = '',
     email = '',
+    cbu = '',
+    alias = '',
     estado_verificacion = '',
   } = usuario;
 
-  const formattedFecha = fecha_nacimiento
-    ? (() => {
-        const d = new Date(fecha_nacimiento);
-        return Number.isNaN(d.getTime()) ? fecha_nacimiento : d.toLocaleDateString();
-      })()
-    : '';
-
   return (
-    <section className="w-full max-w-[1100px] mx-auto bg-white rounded-2xl shadow-lg p-10">
+    <section className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-10">
       <header className="mb-6 text-center">
         <h2 className="text-3xl font-semibold text-black mb-1">Mi Perfil</h2>
         <p className="text-sm text-gray-500">Gestiona la información de tu cuenta</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm text-gray-600">Nombre</label>
           <p className="mt-1 text-gray-800">{nombre}</p>
@@ -44,7 +39,7 @@ export default function ProfileSection({ usuario = {} }) {
 
         <div>
           <label className="block text-sm text-gray-600">Fecha de nacimiento</label>
-          <p className="mt-1 text-gray-800">{formattedFecha}</p>
+          <p className="mt-1 text-gray-800">{fecha_nacimiento}</p>
         </div>
 
         <div>
@@ -57,12 +52,27 @@ export default function ProfileSection({ usuario = {} }) {
           <p className="mt-1 break-words text-gray-800">{email}</p>
         </div>
 
-        <div className="md:col-span-2">
+        <div>
+          <label className="block text-sm text-gray-600">CBU</label>
+          <p className="mt-1 text-gray-800">{cbu}</p>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-600">Estado civil</label>
+          <p className="mt-1 text-gray-800">{usuario.estado_civil || 'No especificado'}</p>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-600">Alias</label>
+          <p className="mt-1 text-gray-800">{alias}</p>
+        </div>
+
+        <div>
           <label className="block text-sm text-gray-600">Estado de verificación</label>
           <p className="mt-1 text-gray-800">{estado_verificacion}</p>
         </div>
 
-        <div className="md:col-span-2 text-center mt-6">
+        <div className="md:col-span-2 text-center mt-4">
           <Link to="/perfil/editar" className="inline-block bg-purple-600 text-white py-2 px-8 rounded-lg hover:bg-purple-700 transition-colors">
             Editar Perfil
           </Link>

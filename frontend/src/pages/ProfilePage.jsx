@@ -14,14 +14,13 @@ const usuarioMock = {
 
 const ProfilePage = () => {
     return (
-        <AuthLayout>
+        
             <SidebarLayout>
                 <div className="mt-10 mb-16">
                         <ProfileSection usuario={usuarioMock} />
                 </div>            
             </SidebarLayout>
             
-        </AuthLayout>
     )
 };
 

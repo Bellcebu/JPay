@@ -3,11 +3,10 @@ import SidebarLayout from "../layouts/SidebarLayout";
 import AuthLayout from "../layouts/AuthLayout";
 const HomePage = () => {
     return (
-        <AuthLayout>
-            <SidebarLayout>
-                <BalanceSection />
-            </SidebarLayout>
-        </AuthLayout>
+        <SidebarLayout>
+            <BalanceSection />
+        </SidebarLayout>
+       
     )
 };
 

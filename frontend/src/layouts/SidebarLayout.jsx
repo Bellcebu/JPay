@@ -26,7 +26,7 @@ export default function SidebarLayout ({ children }) {
             </aside>
 
             {/* Fondo fijo que cubre toda el área a la derecha del sidebar */}
-            <div className="fixed left-64 top-0 right-0 bottom-0 -z-10 bg-gradient-to-br from-[#7C2BEC]/58 via-[#000000]/50 to-[#000000]/100" />
+            <div className="fixed left-64 top-0 right-0 bottom-0 -z-10 bg-gradient-to-br from-slate-50 via-purple-50 to-purple-100" />
 
             {/* Contenido principal */}
             <main className="ml-64 flex-1 min-h-screen p-6">

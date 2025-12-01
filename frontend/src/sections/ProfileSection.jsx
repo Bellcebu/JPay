@@ -72,9 +72,15 @@ export default function ProfileSection({ usuario = {} }) {
           <p className="mt-1 text-gray-800">{estado_verificacion}</p>
         </div>
 
-        <div className="md:col-span-2 text-center mt-4">
+        <div className="md:col-span-1 text-center mt-4">
           <Link to="/perfil/editar" className="inline-block bg-purple-600 text-white py-2 px-8 rounded-lg hover:bg-purple-700 transition-colors">
             Editar Perfil
+          </Link>
+        </div>
+
+        <div className="md:col-span-1 text-center mt-2">
+          <Link to="/sessions" className="inline-block bg-gray-200 text-gray-800 py-2 px-8 rounded-lg hover:bg-gray-300 transition-colors">
+            Administrar Sesiones
           </Link>
         </div>
       </div>

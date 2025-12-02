@@ -14,6 +14,8 @@ from .views import (
     CuentaVinculadaViewSet,
     MovimientoViewSet,
     SimuladorPrestamoView,
+    LoginView,
+    LogoutView,
 )
 
 router = DefaultRouter()
@@ -30,7 +32,8 @@ router.register(r'movimientos', MovimientoViewSet, basename='movimiento')
 
 urlpatterns = [
     path('', include(router.urls)),
-    
     path("simulador-prestamo/", SimuladorPrestamoView.as_view(), name="simulador-prestamo"),
+    path("auth/login/", LoginView.as_view(), name="api-login"),
+    path("auth/logout/", LogoutView.as_view(), name="api-logout"),
     path("", include(router.urls)),
 ]

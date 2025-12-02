@@ -1,5 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
+from datetime import date, timedelta
+from utils.simulacion import simular_prestamo
 
 
 class Usuario(AbstractUser):
@@ -61,13 +64,17 @@ class Sesion(models.Model):
     def __str__(self):
         return f"Sesión {self.id} - {self.usuario}"
 
-
 class Prestamo(models.Model):
     class Estado(models.TextChoices):
         APROBADO = "aprobado", "Aprobado"
         DESEMBOLSADO = "desembolsado", "Desembolsado"
         CANCELADO = "cancelado", "Cancelado"
         MORA = "mora", "Mora"
+
+    class Sistema(models.TextChoices):
+        FRANCES = "frances", "Francés"
+        ALEMAN = "aleman", "Alemán"
+        AMERICANO = "americano", "Americano"
 
     monto = models.DecimalField(max_digits=12, decimal_places=2)
     plazo_meses = models.PositiveIntegerField()
@@ -79,15 +86,16 @@ class Prestamo(models.Model):
         choices=Estado.choices,
         default=Estado.APROBADO,
     )
+    sistema = models.CharField(  # 👈 qué sistema de amortización usa este préstamo
+        max_length=20,
+        choices=Sistema.choices,
+        default=Sistema.FRANCES,
+    )
 
     ultima_refinanciacion = models.DateField(null=True, blank=True)
     fecha_desembolso = models.DateField(null=True, blank=True)
 
-    usuario = models.ForeignKey(
-        Usuario,
-        on_delete=models.RESTRICT,
-        related_name="prestamos",
-    )
+    usuario = models.ForeignKey("Usuario", on_delete=models.RESTRICT, related_name="prestamos")
     solicitud_prestamo = models.OneToOneField(
         "SolicitudPrestamo",
         null=True,
@@ -96,8 +104,33 @@ class Prestamo(models.Model):
         related_name="prestamo",
     )
 
-    def __str__(self):
-        return f"Préstamo #{self.id} - {self.usuario}"
+    def generar_cuotas(self, fecha_primera_cuota: date | None = None):
+        if fecha_primera_cuota is None:
+            base = self.fecha_desembolso or date.today()
+        else:
+            base = fecha_primera_cuota
+
+        cuotas_data, total_intereses, total_pagado = simular_prestamo(
+            monto=self.monto,
+            tna=self.tna,
+            plazo_meses=self.plazo_meses,
+            sistema=self.sistema,
+        )
+
+        # Para simplificar: cada cuota vence cada 30 días
+       
+        for idx, data in enumerate(cuotas_data, start=1):
+            fecha_vencimiento = base + timedelta(days=30 * idx)
+
+            Cuota.objects.create(
+                prestamo=self,
+                fecha_vencimiento=fecha_vencimiento,
+                capital=Decimal(data["capital"]),
+                interes=Decimal(data["interes"]),
+                impuestos=Decimal("0.00"),           # definir
+                saldo_cuota=Decimal(data["cuota"]),
+                estado=Cuota.Estado.PENDIENTE,
+            )
 
 
 class Cuota(models.Model):

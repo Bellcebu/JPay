@@ -12,9 +12,9 @@ function App() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/sessions" element={<SessionPage />} />  {/* Nueva ruta */}
-      <Route path="/home" element={<HomePage />} />
-      <Route path="/profile" element={<ProfilePage/>} />
+      <Route path="/sessions" element={<SessionPage />} /> 
+      <Route path="/dashboard" element={<HomePage />} />
+      <Route path="/perfil" element={<ProfilePage/>} />
       <Route path="/perfil/editar" element={<EditarPerfilPage/>} />
     </Routes>
   );

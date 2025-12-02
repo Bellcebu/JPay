@@ -5,7 +5,7 @@ export default function SidebarLayout ({ children }) {
         <div className = "flex min-h-screen">
             <aside className="fixed left-0 top-0 h-screen w-64 bg-[#2E2E48] text-white flex flex-col p-4 z-20">
                 <div>
-                    <h2 className="text-xl font-bold mb-6">JPAY</h2>
+                    <h2 className="text-4xl font-bold mb-6 text-center">JPAY</h2>
                     <nav className="flex flex-col gap-3">
                     <a href="/perfil" className="hover:bg-white-600 p-2 rounded">Perfil</a>
                     <a href="/dashboard" className="hover:bg-white-600 p-2 rounded">Dashboard</a>

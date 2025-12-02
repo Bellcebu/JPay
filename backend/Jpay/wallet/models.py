@@ -1,137 +1,256 @@
 from django.db import models
-
-class Usuario(models.Model):
-    class Estado(models.TextChoices):
-        PENDIENTE = "pediente"
-        VERIFICADO = "verificado"
-        BLOQUEDO = "bloqueado"
+from django.contrib.auth.models import AbstractUser
 
 
-    nombre = models.CharField()
-    apellido = models.char()
-    dni = models.BigIntegerField()
+class Usuario(AbstractUser):
+    class EstadoVerificacion(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        VERIFICADO = "verificado", "Verificado"
+        BLOQUEADO = "bloqueado", "Bloqueado"
+
+    dni = models.BigIntegerField(unique=True)
     fecha_nacimiento = models.DateField()
-    telefono = models.BigIntegerField()
-    email = models.EmailField()
-    estado_verificacion = models.CharField(choices=Estado.choices, default=Estado.PENDIENTE)
-    score = models.FloatField(null= True)
+    telefono = models.CharField(max_length=20)
+    estado_verificacion = models.CharField(
+        max_length=20,
+        choices=EstadoVerificacion.choices,
+        default=EstadoVerificacion.PENDIENTE,
+    )
+    score = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.username} ({self.dni})"
 
 
 class SolicitudPrestamo(models.Model):
-    monto_solicitado = models.FloatField()
-    plazo_meses = models.IntegerField()
-    is_aprobado = models.BooleanField(default= False)
-    motivo_de_rechazo = models.CharField(null= True, default= None)
-    creado_en = models.DateField(auto_now_add= True)
+    monto_solicitado = models.DecimalField(max_digits=12, decimal_places=2)
+    plazo_meses = models.PositiveIntegerField()
+    is_aprobado = models.BooleanField(default=False)
+    motivo_de_rechazo = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
 
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE) #nose si hago null=true para que sea opcional para el usuario
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_prestamo",
+    )
+
+    def __str__(self):
+        return f"Solicitud #{self.id} - {self.usuario}"
+
 
 class Sesion(models.Model):
-    dispositivo = models.CharField(max_length= 100)
-    ip = models.CharField(max_length=20)
-    creado_en = models.DateField(auto_now_add=True)
-    expirada_en = models.DateField(null=True)
-    ultima_actividad = models.DateField(auto_now_add=True)
-    is_activa = models.BooleanField(default= True)
+    dispositivo = models.CharField(max_length=100)
+    ip = models.GenericIPAddressField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+    expirada_en = models.DateTimeField(null=True, blank=True)
+    ultima_actividad = models.DateTimeField(auto_now=True)
+    is_activa = models.BooleanField(default=True)
 
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="sesiones",
+    )
+
+    def __str__(self):
+        return f"Sesión {self.id} - {self.usuario}"
+
 
 class Prestamo(models.Model):
     class Estado(models.TextChoices):
-        APROBADO = "aprobado"
-        DESEMBOLSADO = "desembolsado"
-        CANCELADO = "cancelado"
-        MORA = "mora"
+        APROBADO = "aprobado", "Aprobado"
+        DESEMBOLSADO = "desembolsado", "Desembolsado"
+        CANCELADO = "cancelado", "Cancelado"
+        MORA = "mora", "Mora"
 
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    plazo_meses = models.PositiveIntegerField()
+    tep = models.DecimalField(max_digits=6, decimal_places=2)
+    cft = models.DecimalField(max_digits=6, decimal_places=2)
+    tna = models.DecimalField(max_digits=6, decimal_places=2)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.APROBADO,
+    )
 
-    monto = models.FloatField()
-    plazo_meses = models.IntegerField()
-    tep = models.FloatField()
-    cft = models.FloatField()
-    tna = models.FloatField()
-    estado = models.CharField(choices=Estado.choices, default=Estado.APROBADO)
+    ultima_refinanciacion = models.DateField(null=True, blank=True)
+    fecha_desembolso = models.DateField(null=True, blank=True)
 
-    ultima_refinanciacion = models.DateField(null=True)
-    fecha_desembolso = models.DateField(null=True)
-    usuario = models.ForeignKey(Usuario, on_delete=models.RESTRICT)
-    solicitud_prestamo = models.OneToOneField(SolicitudPrestamo, null=True)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.RESTRICT,
+        related_name="prestamos",
+    )
+    solicitud_prestamo = models.OneToOneField(
+        "SolicitudPrestamo",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="prestamo",
+    )
+
+    def __str__(self):
+        return f"Préstamo #{self.id} - {self.usuario}"
+
 
 class Cuota(models.Model):
     class Estado(models.TextChoices):
-        PENDIENTE = "pendiente"
-        PAGADA = "pagada"
-        VENCIDA = "vencida"
+        PENDIENTE = "pendiente", "Pendiente"
+        PAGADA = "pagada", "Pagada"
+        VENCIDA = "vencida", "Vencida"
 
     fecha_vencimiento = models.DateField()
-    capital = models.FloatField()
-    interes = models.FloatField()
-    impuestos = models.FloatField()
-    saldo_cuota = models.FloatField()
-    estado = models.CharField(choices=Estado.choices, default=Estado.PENDIENTE)
+    capital = models.DecimalField(max_digits=12, decimal_places=2)
+    interes = models.DecimalField(max_digits=12, decimal_places=2)
+    impuestos = models.DecimalField(max_digits=12, decimal_places=2)
+    saldo_cuota = models.DecimalField(max_digits=12, decimal_places=2)
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
 
-    prestamo = models.ForeignKey(Prestamo, on_delete=models.CASCADE)
+    prestamo = models.ForeignKey(
+        Prestamo,
+        on_delete=models.CASCADE,
+        related_name="cuotas",
+    )
+
+    def __str__(self):
+        return f"Cuota #{self.id} - Préstamo #{self.prestamo_id}"
+
 
 class Pago(models.Model):
-    importe = models.FloatField()
-    fecha_pago = models.DateField(auto_now_add=True)
-    comprobante = models.FileField()
+    importe = models.DecimalField(max_digits=12, decimal_places=2)
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    comprobante = models.FileField(
+        upload_to="comprobantes/pagos/",
+        null=True,
+        blank=True,
+    )
 
-    cuota = models.OneToOneField(Cuota, null=True, on_delete=models.CASCADE)
+    cuota = models.OneToOneField(
+        Cuota,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="pago",
+    )
+
+    def __str__(self):
+        return f"Pago #{self.id} - {self.importe}"
+
 
 class Notificacion(models.Model):
     class Tipo(models.TextChoices):
-        VENCICMIENTO = "vencimiento"
-        PAGO = "pago"
-        APROBACION = "aprobacion"
-        RECHAZO = "rechazo"
-        CAMBIO_PERFIL = "cambio_perfil"
-        ALERTA = "alerto"
-    
-    class Prioridad(models.TextChoices):
-        BAJA = "baja"
-        MEDIA = "media"
-        ALTA = "alta"
+        VENCIMIENTO = "vencimiento", "Vencimiento"
+        PAGO = "pago", "Pago"
+        APROBACION = "aprobacion", "Aprobación"
+        RECHAZO = "rechazo", "Rechazo"
+        CAMBIO_PERFIL = "cambio_perfil", "Cambio de perfil"
+        ALERTA = "alerta", "Alerta"
 
-    titulo = models.CharField()
+    class Prioridad(models.TextChoices):
+        BAJA = "baja", "Baja"
+        MEDIA = "media", "Media"
+        ALTA = "alta", "Alta"
+
+    titulo = models.CharField(max_length=255)
     cuerpo = models.TextField()
-    prioridad = models.CharField(choices=Prioridad.choices)
-    tipo = models.CharField(choices=Tipo.choices)
+    prioridad = models.CharField(
+        max_length=10,
+        choices=Prioridad.choices,
+        default=Prioridad.MEDIA,
+    )
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+    )
     creado_en = models.DateTimeField(auto_now_add=True)
     leida = models.BooleanField(default=False)
 
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    usuario = models.ForeignKey(
+        Usuario,
+        on_delete=models.CASCADE,
+        related_name="notificaciones",
+    )
+
+    def __str__(self):
+        return f"{self.titulo} - {self.usuario}"
+
 
 class Cuenta(models.Model):
     class EstadoVerificacion(models.TextChoices):
-        PENDIENTE = "pediente"
-        VERIFICADO = "verificado"
-        BLOQUEDA = "bloqueada"
+        PENDIENTE = "pendiente", "Pendiente"
+        VERIFICADO = "verificado", "Verificado"
+        BLOQUEADA = "bloqueada", "Bloqueada"
+
+    estado_verificacion = models.CharField(
+        max_length=20,
+        choices=EstadoVerificacion.choices,
+        default=EstadoVerificacion.PENDIENTE,
+    )
+    # CVU/CBU son 22 dígitos → usar CharField, no BigInteger
+    cvu = models.CharField(max_length=22, unique=True)
+    saldo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
+    alias = models.CharField(max_length=50, unique=True)
+
+    usuario = models.OneToOneField(
+        Usuario,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="cuenta",
+    )
+
+    def __str__(self):
+        return f"Cuenta {self.cvu}"
 
 
-    estado_verificacion = models.CharField(choices=EstadoVerificacion.choices, default=EstadoVerificacion.PENDIENTE)
-    cvu = models.BigIntegerField(unique=True)
-    saldo = models.FloatField()
-    alias = models.CharField()
+class CuentaVinculada(models.Model):
+    cbu = models.CharField(max_length=22, unique=True)
+    cuenta = models.OneToOneField(
+        Cuenta,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="cuenta_vinculada",
+    )
 
-    usuario = models.OneToOneField(Usuario, null=True, on_delete=models.CASCADE)
-
-class Cuenta_vinculada(models.Model):
-    cbu = models.BigIntegerField(unique=True)
-    cuenta = models.OneToOneField(Cuenta, on_delete=models.CASCADE, null=True)
+    def __str__(self):
+        return f"Cuenta vinculada {self.cbu}"
 
 
-
-
-class Moviento(models.Model):
+class Movimiento(models.Model):
     class Tipo(models.TextChoices):
-        DEBITO = "debito"
-        CREDITO = "credito"
-        TRANSFERENCIA = "transferencia"
+        DEBITO = "debito", "Débito"
+        CREDITO = "credito", "Crédito"
+        TRANSFERENCIA = "transferencia", "Transferencia"
 
-    monto = models.FloatField()
-    creado_en = models.DateField(auto_now_add=True)
-    tipo = models.CharField(choices=Tipo.choices)
-    #estado
-    comprobante = models.FileField()
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(
+        max_length=20,
+        choices=Tipo.choices,
+    )
+    comprobante = models.FileField(
+        upload_to="comprobantes/movimientos/",
+        null=True,
+        blank=True,
+    )
 
-    cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE)
+    cuenta = models.ForeignKey(
+        Cuenta,
+        on_delete=models.CASCADE,
+        related_name="movimientos",
+    )
+
+    def __str__(self):
+        return f"Movimiento #{self.id} - {self.tipo}"

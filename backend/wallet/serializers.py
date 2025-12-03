@@ -13,6 +13,8 @@ from .models import (
     CuentaVinculada,
     Movimiento,
     QRPaymentIntent,
+    BiometricVerification,
+    KYCVerification,
 )
 
 
@@ -305,3 +307,41 @@ class TransferenciaSerializer(serializers.Serializer):
         attrs["cuenta_origen_obj"] = cuenta_origen
         attrs["cuenta_destino_obj"] = cuenta_destino
         return attrs
+    
+
+class BiometricVerifySerializer(serializers.Serializer):
+    sample = serializers.CharField(
+        help_text="Token/snapshot/resultado que venga del cliente (por ahora string dummy)."
+    )
+    device_id = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text="Identificador lógico del dispositivo (opcional).",
+    )
+    sesion_id = serializers.IntegerField(
+        required=False,
+        help_text="ID de Sesion para asociar la verificación (opcional).",
+    )
+
+    def validate_sesion_id(self, value):
+        try:
+            sesion = Sesion.objects.get(id=value)
+        except Sesion.DoesNotExist:
+            raise serializers.ValidationError("Session not found.")
+        self.context["sesion_obj"] = sesion
+        return value
+    
+
+class KYCDNISerializer(serializers.Serializer):
+    dni_frente = serializers.ImageField()
+    dni_dorso = serializers.ImageField()
+
+    def create_or_update_kyc(self, usuario):
+        kyc, _ = KYCVerification.objects.get_or_create(usuario=usuario)
+        kyc.dni_frente = self.validated_data["dni_frente"]
+        kyc.dni_dorso = self.validated_data["dni_dorso"]
+        # por ahora siempre pendiente; más adelante acá enchufás proveedor real
+        kyc.estado = KYCVerification.Estado.PENDIENTE
+        kyc.comentario = "KYC created with dummy flow."
+        kyc.save()
+        return kyc

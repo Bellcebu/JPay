@@ -1,16 +1,20 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
 from .simulacion import simular_prestamo
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
+from django.utils import timezone
+
 
 
 from decimal import Decimal
 from django.db import transaction
 from .qr_utils import QRPaymentData, encode_qr_payload, decode_qr_payload
+
+from .biometrics import get_biometric_provider
 
  
 from .models import (
@@ -24,7 +28,9 @@ from .models import (
     Cuenta,
     CuentaVinculada,
     Movimiento,
-    QRPaymentIntent
+    QRPaymentIntent,
+    BiometricVerification,
+    KYCVerification,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -46,6 +52,8 @@ from .serializers import (
     QRParseResultSerializer,
     QRPagarSerializer,
     TransferenciaSerializer,
+    BiometricVerifySerializer,
+    KYCDNISerializer,
 )
 
 
@@ -465,6 +473,112 @@ class TransferenciaView(APIView):
                     "cuenta_destino_id": cuenta_destino.id,
                     "monto": str(monto),
                     "descripcion": descripcion,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+    
+
+
+class BiometricVerifyView(APIView):
+    """
+    Facade de verificación biométrica.
+    Hoy usa DummyBiometricProvider, mañana se enchufa a uno real.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = BiometricVerifySerializer(
+            data=request.data,
+            context={"request": request},
+        )
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as exc:
+            return Response(
+                {
+                    "message": "Biometric verification failed. Invalid request data.",
+                    "errors": exc.detail,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        sample = serializer.validated_data["sample"]
+        device_id = serializer.validated_data.get("device_id") or None
+        sesion = serializer.context.get("sesion_obj")
+
+        provider = get_biometric_provider()
+
+        # 1) Creamos la verificación en estado pendiente
+        verification = BiometricVerification.objects.create(
+            usuario=request.user,
+            sesion=sesion,
+            proveedor="dummy",  # en el futuro: el nombre real del vendor
+            estado=BiometricVerification.Estado.PENDIENTE,
+        )
+
+        # 2) Llamamos al proveedor (hoy dummy)
+        result = provider.verify(
+            usuario_id=request.user.id,
+            device_id=device_id,
+            sample=sample,
+        )
+
+        # 3) Actualizamos el estado según el resultado
+        if result.success:
+            verification.marcar_exitosa(score=result.score, razon=result.reason)
+        else:
+            verification.marcar_fallida(score=result.score, razon=result.reason)
+
+        
+        if sesion and result.success:
+            sesion.biometria_verificada_en = timezone.now()
+            sesion.save(update_fields=["biometria_verificada_en"])
+
+        return Response(
+            {
+                "message": "Biometric verification completed.",
+                "data": {
+                    "verification_id": verification.id,
+                    "success": result.success,
+                    "score": result.score,
+                    "reason": result.reason,
+                    "estado": verification.estado,
+                    "usuario": UsuarioSerializer(request.user).data,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class KYCUploadDNIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        serializer = KYCDNISerializer(data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as exc:
+            return Response(
+                {
+                    "message": "KYC DNI upload failed. Please fix the errors and try again.",
+                    "errors": exc.detail,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        kyc = serializer.create_or_update_kyc(request.user)
+
+        return Response(
+            {
+                "message": "DNI images uploaded successfully.",
+                "data": {
+                    "estado": kyc.estado,
+                    "usuario_id": kyc.usuario_id,
                 },
             },
             status=status.HTTP_200_OK,

@@ -1,5 +1,4 @@
-# app/serializers.py
-
+from decimal import Decimal
 from rest_framework import serializers
 from .models import (
     Usuario,
@@ -94,6 +93,44 @@ class SimuladorInputSerializer(serializers.Serializer):
     plazo_meses = serializers.IntegerField(min_value=1)
     sistema = serializers.ChoiceField(choices=["frances", "aleman", "americano"])
 
+    def validate_monto(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Amount must be greater than 0.")
+        if value > Decimal("100000000"):
+            raise serializers.ValidationError("Amount is too large.")
+        return value
+
+    def validate_tasa_nominal_anual(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Rate cannot be negative.")
+        if value > Decimal("300"):
+            raise serializers.ValidationError("Rate seems unrealistically high.")
+        return value
+
+    def validate_plazo_meses(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Term must be at least 1 month.")
+        if value > 600:
+            raise serializers.ValidationError("Term is too long.")
+        return value
+
+    def validate(self, attrs):
+        # Example of cross-field validation if you want it
+        # e.g. prevent extremely high amount with extremely long term
+        monto = attrs.get("monto")
+        plazo = attrs.get("plazo_meses")
+
+        if monto is not None and plazo is not None:
+            if monto > Decimal("1000000") and plazo > 360:
+                raise serializers.ValidationError(
+                    {
+                        "plazo_meses": [
+                            "For amounts above 1,000,000 the maximum term is 360 months."
+                        ]
+                    }
+                )
+        return attrs
+
 
 class SimuladorCuotaSerializer(serializers.Serializer):
     numero = serializers.IntegerField()
@@ -132,17 +169,33 @@ class SignUpSerializer(serializers.ModelSerializer):
             "fecha_nacimiento",
             "telefono",
         ]
+    
+    def validate_username(self, value):
+        if Usuario.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def validate_email(self, value):
+        if Usuario.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
+    def validate_dni(self, value):
+        if Usuario.objects.filter(dni=value).exists():
+            raise serializers.ValidationError("A user with this DNI already exists.")
+        return value
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
-            raise serializers.ValidationError("Passwords do not match.")
+            raise serializers.ValidationError(
+                {"password2": ["Passwords do not match."]}
+            )
         return attrs
 
     def create(self, validated_data):
         password = validated_data.pop("password")
         validated_data.pop("password2", None)
-
         user = Usuario(**validated_data)
-        user.set_password(password)  # 👈 encripta la password
+        user.set_password(password)
         user.save()
         return user

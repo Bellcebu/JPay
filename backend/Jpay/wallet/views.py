@@ -5,6 +5,7 @@ from rest_framework import status, permissions
 from .simulacion import simular_prestamo
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
  
 from .models import (
     Usuario,
@@ -93,9 +94,20 @@ class MovimientoViewSet(viewsets.ModelViewSet):
 
 class SimuladorPrestamoView(APIView):
     def post(self, request, *args, **kwargs):
-        input_serializer = SimuladorInputSerializer(data=request.data)
-        input_serializer.is_valid(raise_exception=True)
-        data = input_serializer.validated_data
+        serializer = SimuladorInputSerializer(data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as exc:
+            return Response(
+                {
+                    "message": "Loan simulation failed. Please fix the errors and try again.",
+                    "errors": exc.detail,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = serializer.validated_data
 
         cuotas, total_intereses, total_pagado = simular_prestamo(
             monto=data["monto"],
@@ -115,7 +127,14 @@ class SimuladorPrestamoView(APIView):
         }
 
         output_serializer = SimuladorResultadoSerializer(resultado)
-        return Response(output_serializer.data, status=status.HTTP_200_OK)
+
+        return Response(
+            {
+                "message": "Loan simulation completed successfully.",
+                "result": output_serializer.data,
+            },
+            status=status.HTTP_200_OK,
+        )
     
 class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):

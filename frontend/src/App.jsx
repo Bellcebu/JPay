@@ -5,7 +5,7 @@ import SessionPage from './pages/SessionPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import EditarPerfilPage from './pages/EditarPerfilPage';
-
+import TransferPage from './pages/TransferPage';
 
 function App() {
   return (
@@ -16,6 +16,7 @@ function App() {
       <Route path="/home" element={<HomePage />} />
       <Route path="/profile" element={<ProfilePage/>} />
       <Route path="/perfil/editar" element={<EditarPerfilPage/>} />
+      <Route path="/transferencias" element={<TransferPage/>} />
     </Routes>
   );
 }

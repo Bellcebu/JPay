@@ -7,7 +7,7 @@ export default function SidebarLayout ({ children }) {
                 <div>
                     <h2 className="text-xl font-bold mb-6">JPAY</h2>
                     <nav className="flex flex-col gap-3">
-                    <a href="/perfil" className="hover:bg-white-600 p-2 rounded">Perfil</a>
+                    <a href="/profile" className="hover:bg-white-600 p-2 rounded">Perfil</a>
                     <a href="/dashboard" className="hover:bg-white-600 p-2 rounded">Dashboard</a>
                     <a href="/transferencias" className="hover:bg-white-600 p-2 rounded">Transferencias</a>
                     <a href="/actividad" className="hover:bg-white-600 p-2 rounded">Mi Actividad</a>

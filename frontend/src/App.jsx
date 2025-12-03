@@ -10,7 +10,7 @@ import EditarPerfilPage from './pages/EditarPerfilPage';
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Login />} />
+      <Route path="/logout" element={<Login />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/sessions" element={<SessionPage />} />  {/* Nueva ruta */}
       <Route path="/home" element={<HomePage />} />

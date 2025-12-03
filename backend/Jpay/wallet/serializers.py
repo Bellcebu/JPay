@@ -1,3 +1,4 @@
+from .qr_utils import QRPaymentData
 from decimal import Decimal
 from rest_framework import serializers
 from .models import (
@@ -11,6 +12,7 @@ from .models import (
     Cuenta,
     CuentaVinculada,
     Movimiento,
+    QRPaymentIntent,
 )
 
 
@@ -199,3 +201,107 @@ class SignUpSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+    
+
+
+
+
+
+
+class QRGenerateSerializer(serializers.Serializer):
+    cuenta_destino_id = serializers.IntegerField()
+    monto = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+    descripcion = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate_cuenta_destino_id(self, value):
+        try:
+            cuenta = Cuenta.objects.get(id=value)
+        except Cuenta.DoesNotExist:
+            raise serializers.ValidationError("Destination account not found.")
+        self.context["cuenta_destino"] = cuenta
+        return value
+
+
+class QRGenerateResponseSerializer(serializers.Serializer):
+    qr_payload = serializers.CharField()
+    intent_id = serializers.CharField()
+    tiene_monto_fijo = serializers.BooleanField()
+    moneda = serializers.CharField()
+    monto = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    descripcion = serializers.CharField()
+
+
+class QRParseSerializer(serializers.Serializer):
+    qr_payload = serializers.CharField()
+
+
+class QRParseResultSerializer(serializers.Serializer):
+    intent_id = serializers.CharField()
+    cuenta_destino_id = serializers.IntegerField(required=False)
+    cuenta_destino_alias = serializers.CharField(required=False, allow_blank=True)
+    cuenta_destino_cvu = serializers.CharField(required=False, allow_blank=True)
+    titular = serializers.CharField(required=False, allow_blank=True)
+    monto = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    moneda = serializers.CharField()
+    descripcion = serializers.CharField()
+
+
+class QRPagarSerializer(serializers.Serializer):
+    qr_payload = serializers.CharField()
+    cuenta_origen_id = serializers.IntegerField()
+    monto = serializers.DecimalField(
+        max_digits=12, decimal_places=2, required=False, allow_null=True
+    )
+
+    def validate_cuenta_origen_id(self, value):
+        try:
+            cuenta = Cuenta.objects.get(id=value)
+        except Cuenta.DoesNotExist:
+            raise serializers.ValidationError("Source account not found.")
+        self.context["cuenta_origen"] = cuenta
+        return value
+
+
+class TransferenciaSerializer(serializers.Serializer):
+    cuenta_origen_id = serializers.IntegerField()
+    cuenta_destino_id = serializers.IntegerField()
+    monto = serializers.DecimalField(max_digits=12, decimal_places=2)
+    descripcion = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        origen_id = attrs["cuenta_origen_id"]
+        destino_id = attrs["cuenta_destino_id"]
+        monto = attrs["monto"]
+
+        if origen_id == destino_id:
+            raise serializers.ValidationError(
+                {"cuenta_destino_id": ["Origin and destination must be different."]}
+            )
+
+        try:
+            cuenta_origen = Cuenta.objects.get(id=origen_id)
+        except Cuenta.DoesNotExist:
+            raise serializers.ValidationError(
+                {"cuenta_origen_id": ["Source account not found."]}
+            )
+
+        try:
+            cuenta_destino = Cuenta.objects.get(id=destino_id)
+        except Cuenta.DoesNotExist:
+            raise serializers.ValidationError(
+                {"cuenta_destino_id": ["Destination account not found."]}
+            )
+
+        if monto <= 0:
+            raise serializers.ValidationError({"monto": ["Amount must be > 0."]})
+
+        if Decimal(str(cuenta_origen.saldo)) < monto:
+            raise serializers.ValidationError(
+                {"monto": ["Insufficient balance in source account."]}
+            )
+
+        attrs["cuenta_origen_obj"] = cuenta_origen
+        attrs["cuenta_destino_obj"] = cuenta_destino
+        return attrs

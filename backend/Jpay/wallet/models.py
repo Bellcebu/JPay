@@ -3,6 +3,48 @@ from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 from datetime import date, timedelta
 from .simulacion import simular_prestamo
+import uuid
+from django.conf import settings
+
+
+class QRPaymentIntent(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        PAGADO = "pagado", "Pagado"
+        CANCELADO = "cancelado", "Cancelado"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    cuenta_destino = models.ForeignKey(
+        "Cuenta",
+        on_delete=models.CASCADE,
+        related_name="intentos_cobro_qr",
+    )
+    monto = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    moneda = models.CharField(max_length=3, default="ARS")
+    descripcion = models.CharField(max_length=255, blank=True)
+
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
+
+    referencia_externa = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Para mapear a IDs de Transferencias 3.0 / PSP en el futuro.",
+    )
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"QRIntent {self.id} -> {self.cuenta_destino.alias or self.cuenta_destino.cvu}"
+
+    @property
+    def tiene_monto_fijo(self) -> bool:
+        return self.monto is not None
 
 
 class Usuario(AbstractUser):

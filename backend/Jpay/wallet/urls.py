@@ -17,6 +17,10 @@ from .views import (
     LoginView,
     LogoutView,
     SignUpView,
+    GenerarQRView,
+    ParsearQRView,
+    PagarQRView,
+    TransferenciaView,
 )
 
 router = DefaultRouter()
@@ -36,6 +40,10 @@ urlpatterns = [
     path("simulador-prestamo/", SimuladorPrestamoView.as_view(), name="simulador-prestamo"),
     path("auth/login/", LoginView.as_view(), name="api-login"),
     path("auth/logout/", LogoutView.as_view(), name="api-logout"),
-     path("auth/signup/", SignUpView.as_view(), name="api-signup"),
+    path("auth/signup/", SignUpView.as_view(), name="api-signup"),
+    path("qr/generar/", GenerarQRView.as_view(), name="qr-generar"),
+    path("qr/parsear/", ParsearQRView.as_view(), name="qr-parsear"),
+    path("qr/pagar/", PagarQRView.as_view(), name="qr-pagar"),
+    path("transferencias/", TransferenciaView.as_view(), name="transferencias"),
     path("", include(router.urls)),
 ]

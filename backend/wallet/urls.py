@@ -21,6 +21,7 @@ from .views import (
     ParsearQRView,
     PagarQRView,
     TransferenciaView,
+    KYCUploadDNIView,
 )
 
 router = DefaultRouter()
@@ -45,5 +46,6 @@ urlpatterns = [
     path("qr/parsear/", ParsearQRView.as_view(), name="qr-parsear"),
     path("qr/pagar/", PagarQRView.as_view(), name="qr-pagar"),
     path("transferencias/", TransferenciaView.as_view(), name="transferencias"),
+    path("auth/kyc/dni/", KYCUploadDNIView.as_view(), name="kyc-dni-upload"),
     path("", include(router.urls)),
 ]

@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 from datetime import date, timedelta
@@ -330,3 +331,105 @@ class Movimiento(models.Model):
 
     def __str__(self):
         return f"Movimiento #{self.id} - {self.tipo}"
+
+
+class BiometricVerification(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        EXITOSA = "exitosa", "Exitosa"
+        FALLIDA = "fallida", "Fallida"
+
+    usuario = models.ForeignKey(
+        "Usuario",
+        on_delete=models.CASCADE,
+        related_name="verificaciones_biometricas",
+    )
+    sesion = models.ForeignKey(
+        "Sesion",
+        on_delete=models.CASCADE,
+        related_name="verificaciones_biometricas",
+        null=True,
+        blank=True,
+    )
+    proveedor = models.CharField(
+        max_length=50,
+        default="dummy",
+        help_text="Nombre del proveedor biométrico (dummy, facephi, etc.)",
+    )
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
+    score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Confianza reportada por el proveedor (0–1, 0–100, etc.)",
+    )
+    razon = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="Mensaje explicando por qué falló o cualquier info del proveedor.",
+    )
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+    verificado_en = models.DateTimeField(null=True, blank=True)
+
+    def marcar_exitosa(self, score: float | None = None, razon: str = ""):
+        self.estado = self.Estado.EXITOSA
+        if score is not None:
+            self.score = score
+        if razon:
+            self.razon = razon
+        self.verificado_en = timezone.now()
+        self.save(update_fields=["estado", "score", "razon", "verificado_en", "actualizado_en"])
+
+    def marcar_fallida(self, razon: str = "", score: float | None = None):
+        self.estado = self.Estado.FALLIDA
+        if score is not None:
+            self.score = score
+        if razon:
+            self.razon = razon
+        self.verificado_en = timezone.now()
+        self.save(update_fields=["estado", "score", "razon", "verificado_en", "actualizado_en"])
+
+    def __str__(self):
+        return f"BiometricVerification(usuario={self.usuario_id}, estado={self.estado})"
+    
+
+class KYCVerification(models.Model):
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente"
+        APROBADA = "aprobada", "Aprobada"
+        RECHAZADA = "rechazada", "Rechazada"
+
+    usuario = models.OneToOneField(
+        "Usuario",
+        on_delete=models.CASCADE,
+        related_name="kyc",
+    )
+
+    dni_frente = models.ImageField(
+        upload_to="kyc/dni_frente/",
+        null=True,
+        blank=True,
+    )
+    dni_dorso = models.ImageField(
+        upload_to="kyc/dni_dorso/",
+        null=True,
+        blank=True,
+    )
+
+    estado = models.CharField(
+        max_length=20,
+        choices=Estado.choices,
+        default=Estado.PENDIENTE,
+    )
+    comentario = models.CharField(max_length=255, blank=True)
+
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"KYC(usuario={self.usuario_id}, estado={self.estado})"

@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 from datetime import date, timedelta
-from utils.simulacion import simular_prestamo
+from .simulacion import simular_prestamo
 
 
 class Usuario(AbstractUser):
@@ -12,7 +12,7 @@ class Usuario(AbstractUser):
         BLOQUEADO = "bloqueado", "Bloqueado"
 
     dni = models.BigIntegerField(unique=True)
-    fecha_nacimiento = models.DateField()
+    fecha_nacimiento = models.DateField(null=True)
     telefono = models.CharField(max_length=20)
     estado_verificacion = models.CharField(
         max_length=20,
@@ -20,6 +20,7 @@ class Usuario(AbstractUser):
         default=EstadoVerificacion.PENDIENTE,
     )
     score = models.FloatField(null=True, blank=True)
+    REQUIRED_FIELDS = ["email", "dni", "telefono"]
 
     def __str__(self):
         return f"{self.username} ({self.dni})"

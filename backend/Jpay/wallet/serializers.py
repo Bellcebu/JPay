@@ -111,3 +111,38 @@ class SimuladorResultadoSerializer(serializers.Serializer):
     total_intereses = serializers.DecimalField(max_digits=14, decimal_places=2)
     total_pagado = serializers.DecimalField(max_digits=14, decimal_places=2)
     cuotas = SimuladorCuotaSerializer(many=True)
+
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+    password2 = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = Usuario
+        fields = [
+            "id",
+            "username",
+            "email",
+            "password",
+            "password2",
+            "first_name",
+            "last_name",
+            "dni",
+            "fecha_nacimiento",
+            "telefono",
+        ]
+
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError("Passwords do not match.")
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        validated_data.pop("password2", None)
+
+        user = Usuario(**validated_data)
+        user.set_password(password)  # 👈 encripta la password
+        user.save()
+        return user

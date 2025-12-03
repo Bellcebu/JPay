@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from utils.simulacion import simular_prestamo
+from .simulacion import simular_prestamo
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
  
@@ -31,6 +31,7 @@ from .serializers import (
     MovimientoSerializer,
     SimuladorInputSerializer,
     SimuladorResultadoSerializer,
+    SignUpSerializer,
 )
 
 
@@ -141,3 +142,21 @@ class LogoutView(APIView):
         except Token.DoesNotExist:
             pass
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class SignUpView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        token, _ = Token.objects.get_or_create(user=user)
+
+        return Response(
+            {
+                "token": token.key,
+                "user": UsuarioSerializer(user).data,
+            },
+            status=status.HTTP_201_CREATED,
+        )

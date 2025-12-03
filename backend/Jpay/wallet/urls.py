@@ -16,6 +16,7 @@ from .views import (
     SimuladorPrestamoView,
     LoginView,
     LogoutView,
+    SignUpView,
 )
 
 router = DefaultRouter()
@@ -35,5 +36,6 @@ urlpatterns = [
     path("simulador-prestamo/", SimuladorPrestamoView.as_view(), name="simulador-prestamo"),
     path("auth/login/", LoginView.as_view(), name="api-login"),
     path("auth/logout/", LogoutView.as_view(), name="api-logout"),
+     path("auth/signup/", SignUpView.as_view(), name="api-signup"),
     path("", include(router.urls)),
 ]

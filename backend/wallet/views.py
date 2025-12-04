@@ -273,6 +273,7 @@ class LogoutView(APIView):
 class SignUpView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @transaction.atomic
     def post(self, request, *args, **kwargs):
         serializer = SignUpSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)

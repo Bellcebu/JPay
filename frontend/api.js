@@ -30,8 +30,8 @@ export const api = {
       }
 
       console.log('Login success data:', data);
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      if (data.access) {
+        localStorage.setItem('token', data.access);
       }
       return data;
     } catch (error) {
@@ -67,8 +67,11 @@ export const api = {
       }
 
       console.log('Register success data:', data);
-      if (data.token) {
-        localStorage.setItem('token', data.token);
+      if (data.access) {
+        console.log('Saving token to localStorage:', data.access);
+        localStorage.setItem('token', data.access);
+      } else {
+        console.error('No access token in register response:', data);
       }
       return data;
     } catch (error) {
@@ -79,6 +82,7 @@ export const api = {
 
   uploadDNI: async (dniFront, dniBack) => {
     const token = localStorage.getItem('token');
+    console.log('uploadDNI reading token:', token);
     if (!token) throw new Error('No authentication token found');
 
     const formData = new FormData();
@@ -89,7 +93,7 @@ export const api = {
       const response = await fetch(`${BASE_URL}/auth/kyc/dni/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: formData,
       });
@@ -106,6 +110,55 @@ export const api = {
     }
   },
 
+  getAccount: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+
+    try {
+      const response = await fetch(`${BASE_URL}/cuentas/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error fetching account');
+      }
+
+      const data = await response.json();
+      return data[0];
+    } catch (error) {
+      console.error('Get Account error:', error);
+      throw error;
+    }
+  },
+
+  getTransactions: async () => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+
+    try {
+      const response = await fetch(`${BASE_URL}/movimientos/`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Error fetching transactions');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get Transactions error:', error);
+      throw error;
+    }
+  },
+
   logout: async () => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -114,7 +167,7 @@ export const api = {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
       } catch (error) {

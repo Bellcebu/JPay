@@ -1,10 +1,17 @@
 import React, { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { User, Home, CreditCard, Activity, FileText, Settings, LogOut, Menu, X } from "lucide-react";
+import { api } from "../../api";
 
 export default function SidebarLayout({ children }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await api.logout();
+        navigate('/');
+    };
 
     const navItems = [
         { path: "/perfil", label: "Perfil", icon: User },
@@ -72,13 +79,13 @@ export default function SidebarLayout({ children }) {
                 </div>
 
                 <div className="mt-auto pt-4 border-t border-gray-700">
-                    <Link
-                        to="/logout"
-                        className="flex items-center gap-3 p-3 rounded-lg text-red-300 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg text-red-300 hover:bg-red-500/10 hover:text-red-400 transition-colors"
                     >
                         <LogOut size={20} />
                         <span className="font-medium">Cerrar sesión</span>
-                    </Link>
+                    </button>
                 </div>
             </aside>
 

@@ -28,19 +28,19 @@ export default function ProfileSection({ usuario = {} }) {
   } = usuario;
 
   const personalInfo = [
-    { label: "Número de DNI", value: dni, icon: IdCard },
-    { label: "Nombre", value: nombre, icon: User },
-    { label: "Apellido", value: apellido, icon: User },
-    { label: "Estado civil", value: estado_civil, icon: Heart },
-    { label: "Fecha de nacimiento", value: fecha_nacimiento, icon: Calendar },
+    { label: "Número de DNI", value: dni, icon: IdCard, editable: false },
+    { label: "Nombre", value: nombre, icon: User, editable: false },
+    { label: "Apellido", value: apellido, icon: User, editable: false },
+    { label: "Estado civil", value: estado_civil, icon: Heart, editable: true },
+    { label: "Fecha de nacimiento", value: fecha_nacimiento, icon: Calendar, editable: false },
   ];
 
   const accountData = [
-    { label: "Email", value: email, icon: Mail },
-    { label: "Teléfono", value: telefono, icon: Phone },
-    { label: "CBU", value: cbu, icon: CreditCard },
-    { label: "Alias", value: alias, icon: AtSign },
-    { label: "Estado de verificación", value: estado_verificacion, icon: ShieldCheck },
+    { label: "Email", value: email, icon: Mail, editable: true },
+    { label: "Teléfono", value: telefono, icon: Phone, editable: true },
+    { label: "CBU", value: cbu, icon: CreditCard, editable: false },
+    { label: "Alias", value: alias, icon: AtSign, editable: true },
+    { label: "Estado de verificación", value: estado_verificacion, icon: ShieldCheck, editable: false },
   ];
 
   const renderGroup = (title, items) => (
@@ -63,12 +63,14 @@ export default function ProfileSection({ usuario = {} }) {
                 </div>
               </div>
               
-              <Link 
-                to="/perfil/editar" 
-                className="text-purple-600 font-medium text-sm hover:text-purple-800 px-3 py-1 rounded-full hover:bg-purple-50 transition-colors"
-              >
-                Modificar
-              </Link>
+              {item.editable && (
+                <Link 
+                  to="/perfil/editar" 
+                  className="text-purple-600 font-medium text-sm hover:text-purple-800 px-3 py-1 rounded-full hover:bg-purple-50 transition-colors"
+                >
+                  Modificar
+                </Link>
+              )}
             </div>
           );
         })}

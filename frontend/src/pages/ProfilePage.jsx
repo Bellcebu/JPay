@@ -1,14 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import SidebarLayout from "../layouts/SidebarLayout";
 import { User, Shield, Smartphone, CreditCard, ChevronRight } from "lucide-react";
+import { api } from "../../api";
 
 const ProfilePage = () => {
-    const user = {
-        name: "Ariana Méndez",
-        email: "ari@example.com",
-        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alejandro"
-    };
+    const [user, setUser] = useState({
+        name: "Cargando...",
+        email: "...",
+        avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=JPay"
+    });
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const accountData = await api.getAccount();
+                if (accountData && accountData.usuario) {
+                    setUser({
+                        name: `${accountData.usuario.first_name} ${accountData.usuario.last_name}`,
+                        email: accountData.usuario.email,
+                        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${accountData.usuario.username}`
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching profile:", error);
+            }
+        };
+
+        fetchProfile();
+    }, []);
 
     const menuItems = [
         {

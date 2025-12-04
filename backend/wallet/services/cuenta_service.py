@@ -10,8 +10,10 @@ class CuentaService:
 
     @staticmethod
     def generar_alias(usuario):
-        base = f"{usuario.nombre.lower()}.{usuario.apellido.lower()}"
-        return base.replace(" ", "") + ".jpay"
+        base = f"{usuario.first_name.lower()}.{usuario.last_name.lower()}"
+        # Add some randomness to avoid collisions
+        suffix = random.randint(1000, 9999)
+        return f"{base.replace(' ', '')}.{suffix}.jpay"
 
     @staticmethod
     def crear_cuenta_para_usuario(usuario):

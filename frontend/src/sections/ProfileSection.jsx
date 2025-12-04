@@ -1,5 +1,17 @@
 import React from "react";
 import { Link } from 'react-router-dom';
+import { 
+  User, 
+  IdCard, 
+  Calendar, 
+  Mail, 
+  Phone, 
+  CreditCard, 
+  AtSign, 
+  ShieldCheck, 
+  ChevronRight,
+  Heart
+} from "lucide-react";
 
 export default function ProfileSection({ usuario = {} }) {
   const {
@@ -12,78 +24,67 @@ export default function ProfileSection({ usuario = {} }) {
     cbu = '',
     alias = '',
     estado_verificacion = '',
+    estado_civil = usuario.estado_civil || 'No especificado'
   } = usuario;
 
+  const personalInfo = [
+    { label: "Número de DNI", value: dni, icon: IdCard },
+    { label: "Nombre", value: nombre, icon: User },
+    { label: "Apellido", value: apellido, icon: User },
+    { label: "Estado civil", value: estado_civil, icon: Heart },
+    { label: "Fecha de nacimiento", value: fecha_nacimiento, icon: Calendar },
+  ];
+
+  const accountData = [
+    { label: "Email", value: email, icon: Mail },
+    { label: "Teléfono", value: telefono, icon: Phone },
+    { label: "CBU", value: cbu, icon: CreditCard },
+    { label: "Alias", value: alias, icon: AtSign },
+    { label: "Estado de verificación", value: estado_verificacion, icon: ShieldCheck },
+  ];
+
+  const renderGroup = (title, items) => (
+    <div className="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+      </div>
+      <div className="divide-y divide-gray-100">
+        {items.map((item, index) => {
+          const Icon = item.icon;
+          return (
+            <div key={index} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors group">
+              <div className="flex items-center gap-4">
+                <div className="text-gray-400 group-hover:text-purple-600 transition-colors">
+                  <Icon size={24} />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{item.value || 'No especificado'}</p>
+                  <p className="text-sm text-gray-500">{item.label}</p>
+                </div>
+              </div>
+              
+              <Link 
+                to="/perfil/editar" 
+                className="text-purple-600 font-medium text-sm hover:text-purple-800 px-3 py-1 rounded-full hover:bg-purple-50 transition-colors"
+              >
+                Modificar
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
-    <section className="w-full max-w-5xl mx-auto bg-white rounded-2xl shadow-lg p-10">
-      <header className="mb-6 text-center">
-        <h2 className="text-3xl font-semibold text-black mb-1">Mi Perfil</h2>
-        <p className="text-sm text-gray-500">Gestiona la información de tu cuenta</p>
+    <section className="w-full max-w-4xl mx-auto">
+      <header className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Información de tu perfil</h2>
+        <p className="text-gray-600">Podés agregar, modificar o corregir tu información personal y los datos de la cuenta.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm text-gray-600">Nombre</label>
-          <p className="mt-1 text-gray-800">{nombre}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Apellido</label>
-          <p className="mt-1 text-gray-800">{apellido}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">DNI</label>
-          <p className="mt-1 text-gray-800">{dni}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Fecha de nacimiento</label>
-          <p className="mt-1 text-gray-800">{fecha_nacimiento}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Teléfono</label>
-          <p className="mt-1 text-gray-800">{telefono}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Email</label>
-          <p className="mt-1 break-words text-gray-800">{email}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">CBU</label>
-          <p className="mt-1 text-gray-800">{cbu}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Estado civil</label>
-          <p className="mt-1 text-gray-800">{usuario.estado_civil || 'No especificado'}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Alias</label>
-          <p className="mt-1 text-gray-800">{alias}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-600">Estado de verificación</label>
-          <p className="mt-1 text-gray-800">{estado_verificacion}</p>
-        </div>
-
-        <div className="md:col-span-1 text-center mt-4">
-          <Link to="/perfil/editar" className="inline-block bg-purple-600 text-white py-2 px-8 rounded-lg hover:bg-purple-700 transition-colors">
-            Editar Perfil
-          </Link>
-        </div>
-
-        <div className="md:col-span-1 text-center mt-2">
-          <Link to="/sessions" className="inline-block bg-gray-200 text-gray-800 py-2 px-8 rounded-lg hover:bg-gray-300 transition-colors">
-            Administrar Sesiones
-          </Link>
-        </div>
-      </div>
+      {renderGroup("Información personal", personalInfo)}
+      {renderGroup("Datos de la cuenta", accountData)}
     </section>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-const PasswordInput = () => {
+const PasswordInput = (props) => {
   const [visible, setVisible] = useState(false);
 
   const toggleVisibility = () => {
@@ -11,10 +11,10 @@ const PasswordInput = () => {
   return (
     <div className="relative">
       <input
-        id="password"
+        {...props}
         type={visible ? 'text' : 'password'}
         placeholder="••••••••"
-        className="w-full px-3 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500"
+        className={`w-full px-3 py-3 pr-10 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-500 ${props.className || ''}`}
       />
       <button
         type="button"

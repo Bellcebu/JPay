@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import TransferCardOrigin from '../components/TransferOriginCard';
+import TransferDestinationCard from '../components/TransferDestinationCard';
+
 
 const TransferSection = () => {
   // Estado para la cuenta origen seleccionada
@@ -55,6 +57,14 @@ const TransferSection = () => {
           Balance={cuentaOrigen.balance}
           onChangeCuenta={handleCambiarCuenta}
         />
+
+        {/* Destino de la transferencia */}
+        <TransferDestinationCard 
+          destinatario={destinatario}
+          setDestinatario={setDestinatario}
+        />
+
+        
       </section>
     </div>
   );

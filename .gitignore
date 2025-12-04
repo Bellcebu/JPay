@@ -1,0 +1,60 @@
+# General
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Python / Django
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.sqlite3
+*.sqlite3-journal
+
+# Django specific
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# Node / Frontend
+node_modules/
+jspm_packages/
+.npm
+.eslintcache
+.stylelintcache
+dist/
+build/
+.next/
+out/
+coverage/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS Generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini

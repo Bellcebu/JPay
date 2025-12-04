@@ -1,6 +1,14 @@
 from .qr_utils import QRPaymentData
 from decimal import Decimal
 from rest_framework import serializers
+
+from rest_framework import permissions, status
+from rest_framework.response import Response
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from .models import (
     Usuario,
     SolicitudPrestamo,
@@ -21,7 +29,6 @@ from .models import (
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        # No exponemos password ni campos de permisos
         fields = [
             "id",
             "username",
@@ -34,12 +41,32 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "estado_verificacion",
             "score",
         ]
+        read_only_fields = [
+            "estado_verificacion",
+            "score",
+        ]
+        extra_kwargs = {
+            "password": {"write_only": True},
+        }
 
 
 class SolicitudPrestamoSerializer(serializers.ModelSerializer):
+    usuario_id = serializers.PrimaryKeyRelatedField(
+        queryset=Usuario.objects.all(),
+        write_only = True,
+        source = "user",
+    )
+
+    usuario = UsuarioSerializer(read_only=True)
+    
     class Meta:
         model = SolicitudPrestamo
         fields = "__all__"
+        read_only_fields = [
+            "motivo_de_rechazo",
+            "is_aprovado",
+            "creado_en",
+        ]
 
 
 class SesionSerializer(serializers.ModelSerializer):
@@ -345,3 +372,22 @@ class KYCDNISerializer(serializers.Serializer):
         kyc.comentario = "KYC created with dummy flow."
         kyc.save()
         return kyc
+    
+
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Extiende el serializer de SimpleJWT para incluir datos del usuario
+    en la respuesta del login.
+    """
+
+    def validate(self, attrs):
+        data = super().validate(attrs)
+
+        # data ya tiene: access, refresh
+        user = self.user
+
+        # Podés agregar lo que quieras
+        data["user"] = UsuarioSerializer(user).data
+
+        return data

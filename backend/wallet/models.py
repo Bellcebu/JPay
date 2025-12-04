@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractUser
 from decimal import Decimal
 from datetime import date, timedelta
-from .simulacion import simular_prestamo
+from .utils.simulacion import simular_prestamo
 import uuid
 from django.conf import settings
 

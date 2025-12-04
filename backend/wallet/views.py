@@ -1,8 +1,9 @@
 from rest_framework import viewsets, status, permissions
+from wallet.utils.rates import obtener_tna_por_score
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from .simulacion import simular_prestamo
+from .utils.simulacion import simular_prestamo
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
@@ -15,9 +16,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from decimal import Decimal
 from django.db import transaction
-from .qr_utils import QRPaymentData, encode_qr_payload, decode_qr_payload
+from .utils.qr_utils import QRPaymentData, encode_qr_payload, decode_qr_payload
 
-from .biometrics import get_biometric_provider
+from wallet.utils.biometrics import get_biometric_provider
 
  
 from .models import (
@@ -122,6 +123,8 @@ class SimuladorPrestamoView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = SimuladorInputSerializer(data=request.data)
 
+    
+
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError as exc:
@@ -137,7 +140,7 @@ class SimuladorPrestamoView(APIView):
 
         cuotas, total_intereses, total_pagado = simular_prestamo(
             monto=data["monto"],
-            tna=data["tasa_nominal_anual"],
+            tna=obtener_tna_por_score(request.user.score),
             plazo_meses=data["plazo_meses"],
             sistema=data["sistema"],
         )
@@ -214,14 +217,20 @@ class SignUpView(APIView):
         refresh = RefreshToken.for_user(user)
         access = refresh.access_token
 
+        from wallet.services.cuenta_service import CuentaService
+        cuenta = CuentaService.crear_cuenta_para_usuario(user)
+
         return Response(
             {
                 "message": "User created successfully.",
                 "refresh": str(refresh),
-                "access": str(access),
-                # Opcional: también podés agregar "token": str(access) si querés el mismo nombre que antes
-                # "token": str(access),
+                "access": str(refresh.access_token),
                 "user": UsuarioSerializer(user).data,
+                "cuenta": {
+                    "cvu": cuenta.cvu,
+                    "alias": cuenta.alias,
+                    "saldo": cuenta.saldo,
+                },
             },
             status=status.HTTP_201_CREATED,
         )

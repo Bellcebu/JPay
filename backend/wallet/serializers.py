@@ -1,4 +1,4 @@
-from .qr_utils import QRPaymentData
+from .utils.qr_utils import QRPaymentData
 from decimal import Decimal
 from rest_framework import serializers
 
@@ -120,7 +120,6 @@ class MovimientoSerializer(serializers.ModelSerializer):
 
 class SimuladorInputSerializer(serializers.Serializer):
     monto = serializers.DecimalField(max_digits=12, decimal_places=2)
-    tasa_nominal_anual = serializers.DecimalField(max_digits=6, decimal_places=2)
     plazo_meses = serializers.IntegerField(min_value=1)
     sistema = serializers.ChoiceField(choices=["frances", "aleman", "americano"])
 
@@ -129,13 +128,6 @@ class SimuladorInputSerializer(serializers.Serializer):
             raise serializers.ValidationError("Amount must be greater than 0.")
         if value > Decimal("100000000"):
             raise serializers.ValidationError("Amount is too large.")
-        return value
-
-    def validate_tasa_nominal_anual(self, value):
-        if value < 0:
-            raise serializers.ValidationError("Rate cannot be negative.")
-        if value > Decimal("300"):
-            raise serializers.ValidationError("Rate seems unrealistically high.")
         return value
 
     def validate_plazo_meses(self, value):

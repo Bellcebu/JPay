@@ -14,12 +14,13 @@ const ProfilePage = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const accountData = await api.getAccount();
-                if (accountData && accountData.usuario) {
+                const userData = await api.getUser();
+                if (userData) {
+                    const storedImage = api.getProfilePicture(userData.id);
                     setUser({
-                        name: `${accountData.usuario.first_name} ${accountData.usuario.last_name}`,
-                        email: accountData.usuario.email,
-                        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${accountData.usuario.username}`
+                        name: `${userData.first_name} ${userData.last_name}`,
+                        email: userData.email,
+                        avatar: storedImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
                     });
                 }
             } catch (error) {

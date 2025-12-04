@@ -32,6 +32,9 @@ export const api = {
       console.log('Login success data:', data);
       if (data.access) {
         localStorage.setItem('token', data.access);
+        if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+        }
       }
       return data;
     } catch (error) {
@@ -70,6 +73,9 @@ export const api = {
       if (data.access) {
         console.log('Saving token to localStorage:', data.access);
         localStorage.setItem('token', data.access);
+        if (data.user) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+        }
       } else {
         console.error('No access token in register response:', data);
       }
@@ -175,5 +181,47 @@ export const api = {
       }
     }
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  },
+
+  getUser: async () => {
+    // Try to get from localStorage first
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      return JSON.parse(storedUser);
+    }
+
+    // If not, try to fetch using ID from token
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+      // Simple JWT decode
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.user_id;
+
+      const response = await fetch(`${BASE_URL}/usuarios/${userId}/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        localStorage.setItem('user', JSON.stringify(userData));
+        return userData;
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+    return null;
+  },
+
+  getProfilePicture: (userId) => {
+    return localStorage.getItem(`profile_picture_${userId}`);
+  },
+
+  setProfilePicture: (userId, base64Image) => {
+    localStorage.setItem(`profile_picture_${userId}`, base64Image);
   }
 };

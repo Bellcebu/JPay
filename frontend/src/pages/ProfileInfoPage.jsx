@@ -10,16 +10,18 @@ const ProfileInfoPage = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const accountData = await api.getAccount();
-                if (accountData && accountData.usuario) {
-                    // Merge account data (alias, cvu) with user data
-                    // and map fields to match ProfileSection expectations
+                const [accountData, userData] = await Promise.all([
+                    api.getAccount(),
+                    api.getUser()
+                ]);
+
+                if (accountData && userData) {
                     const fullProfile = {
-                        ...accountData.usuario,
-                        nombre: accountData.usuario.first_name,
-                        apellido: accountData.usuario.last_name,
+                        ...userData,
+                        nombre: userData.first_name,
+                        apellido: userData.last_name,
                         alias: accountData.alias,
-                        cbu: accountData.cvu, // ProfileSection expects 'cbu', backend sends 'cvu'
+                        cbu: accountData.cvu,
                         saldo: accountData.saldo,
                         estado_verificacion: accountData.estado_verificacion
                     };

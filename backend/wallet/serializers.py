@@ -127,10 +127,7 @@ class CuentaSerializer(serializers.ModelSerializer):
             "alias",
             "saldo",
             "estado_verificacion",
-            "usuario",
         ]
-    
-    usuario = UsuarioSerializer(read_only=True)
 class LookupCuentaSerializer(serializers.Serializer):
     cvu = serializers.CharField()
 

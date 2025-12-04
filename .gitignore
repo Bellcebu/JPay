@@ -34,6 +34,7 @@ local_settings.py
 db.sqlite3
 media/
 staticfiles/
+backend/kyc/
 
 # Node / Frontend
 node_modules/

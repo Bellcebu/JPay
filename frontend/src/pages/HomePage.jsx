@@ -12,8 +12,16 @@ const HomePage = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const accountData = await api.getAccount();
-                setAccount(accountData);
+                const [accountData, userData] = await Promise.all([
+                    api.getAccount(),
+                    api.getUser()
+                ]);
+
+                if (accountData) {
+                    // Merge user data into account object if available
+                    const fullAccountData = userData ? { ...accountData, usuario: userData } : accountData;
+                    setAccount(fullAccountData);
+                }
                 
                 const transactionsData = await api.getTransactions();
                 setTransactions(transactionsData);

@@ -79,24 +79,33 @@ class SesionViewSet(viewsets.ModelViewSet):
     serializer_class = SesionSerializer
 
 
-class PrestamoViewSet(viewsets.ModelViewSet):
-    queryset = Prestamo.objects.all()
+class PrestamoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PrestamoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Each user sees only their own loans
+        return Prestamo.objects.filter(usuario=self.request.user)
 
     def perform_create(self, serializer):
         prestamo = serializer.save()
         prestamo.generar_cuotas()
 
 
-class CuotaViewSet(viewsets.ModelViewSet):
-    queryset = Cuota.objects.all()
-    serializer_class = CuotaSerializer
-
-
-class PagoViewSet(viewsets.ModelViewSet):
-    queryset = Pago.objects.all()
+class PagoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PagoSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        return Pago.objects.filter(cuota__prestamo__usuario=self.request.user)
+
+
+class CuotaViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CuotaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Cuota.objects.filter(prestamo__usuario=self.request.user)
 
 class NotificacionViewSet(viewsets.ModelViewSet):
     queryset = Notificacion.objects.all()
@@ -230,23 +239,6 @@ class SimuladorPrestamoView(APIView):
             status=status.HTTP_200_OK,
         )
     
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Extiende el serializer de SimpleJWT para incluir los datos del usuario
-    en la respuesta de login.
-    """
-
-    def validate(self, attrs):
-        data = super().validate(attrs)  # esto genera access + refresh
-        user = self.user
-
-        # Agregamos datos del usuario
-        data["user"] = UsuarioSerializer(user).data
-
-        # Opcional: si querés mantener compatibilidad con `token`:
-        # data["token"] = data["access"]
-
-        return data
 
 
 class LoginView(TokenObtainPairView):

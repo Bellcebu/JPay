@@ -10,7 +10,7 @@ class CuentaService:
 
     @staticmethod
     def generar_alias(usuario):
-        base = f"{usuario.nombre.lower()}.{usuario.apellido.lower()}"
+        base = f"{usuario.first_name.lower()}.{usuario.last_name.lower()}"
         return base.replace(" ", "") + ".jpay"
 
     @staticmethod
@@ -22,7 +22,7 @@ class CuentaService:
             usuario=usuario,
             cvu=cvu,
             alias=alias,
-            saldo=Decimal("0.00"),
+            saldo=Decimal("1000.00"),
         )
 
         return cuenta

@@ -100,23 +100,57 @@ class SesionSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class PrestamoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Prestamo
-        fields = "__all__"
-
 
 class CuotaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuota
-        fields = "__all__"
+        fields = [
+            "id",
+            "fecha_vencimiento",
+            "capital",
+            "interes",
+            "impuestos",
+            "saldo_cuota",
+            "estado",
+        ]
+        read_only_fields = fields  
 
+class PrestamoSerializer(serializers.ModelSerializer):
+    cuotas = CuotaSerializer(many=True, read_only=True)
 
+    class Meta:
+        model = Prestamo
+        fields = [
+            "id",
+            "monto",
+            "plazo_meses",
+            "tna",
+            "tep",
+            "cft",
+            "sistema",
+            "estado",
+            "fecha_desembolso",
+            "ultima_refinanciacion",
+            "cuotas",
+        ]
+        read_only_fields = fields
+        
 class PagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago
-        fields = "__all__"
-
+        fields = [
+            "id",
+            "importe",
+            "fecha_pago",
+            "comprobante",
+            "cuota",
+        ]
+        read_only_fields = [
+            "id",
+            "importe",
+            "fecha_pago",
+            "cuota",
+        ]
 
 class CuentaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -128,6 +162,13 @@ class CuentaSerializer(serializers.ModelSerializer):
             "saldo",
             "estado_verificacion",
         ]
+
+        read_only_fields = [
+            "saldo"
+            "cvu"
+            "alias"
+        ]
+
 class LookupCuentaSerializer(serializers.Serializer):
     cvu = serializers.CharField()
 
@@ -209,7 +250,7 @@ class SimuladorResultadoSerializer(serializers.Serializer):
 
 class SignUpSerializer(serializers.ModelSerializer):
     permission_classes = [permissions.AllowAny]
-    
+
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
 

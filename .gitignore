@@ -1,10 +1,17 @@
-# General
+# =========================================
+# GENERAL
+# =========================================
 .DS_Store
 .vscode/
 .idea/
 *.log
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# Python / Django
+# =========================================
+# PYTHON / DJANGO
+# =========================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,36 +33,53 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# SQLite files
 *.sqlite3
 *.sqlite3-journal
-
-# Django specific
-local_settings.py
 db.sqlite3
+
+# Django settings overrides
+local_settings.py
+
+# Media & Static
 media/
 staticfiles/
-backend/kyc/
 
-# Node / Frontend
+# KYC and other sensitive upload folders
+backend/kyc/
+backend/comprobantes/
+
+# =========================================
+# DJANGO MIGRATIONS
+# Ignorar TODAS las migrations excepto el __init__.py
+# =========================================
+**/migrations/*
+!**/migrations/__init__.py
+
+# =========================================
+# NODE / FRONTEND
+# =========================================
 node_modules/
 jspm_packages/
 .npm
 .eslintcache
 .stylelintcache
-dist/
-build/
+
+# Next.js (por si en algún momento lo usás)
 .next/
 out/
+
+# Build outputs
+dist/
+build/
 coverage/
 
-# Environment Variables
+# =========================================
+# ENVIRONMENT FILES
+# =========================================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-
-# OS Generated
-Thumbs.db
-ehthumbs.db
-Desktop.ini

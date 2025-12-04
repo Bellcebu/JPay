@@ -1,12 +1,15 @@
 from rest_framework import viewsets, status, permissions
-from wallet.utils.rates import obtener_tna_por_score
+from rest_framework.decorators import action
+from wallet.utils.interes import obtener_tna_por_score, InteresService
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .utils.simulacion import simular_prestamo
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
-
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
+from rest_framework.generics import ListAPIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -60,47 +63,223 @@ from .serializers import (
     KYCDNISerializer,
     SignUpSerializer,
     CustomTokenObtainPairSerializer,
-    LookupCuentaSerializer
+    LookupCuentaSerializer,
+    ContactoSerializer,
+    UsuarioSuggestionSerializer,
+    PrestamoCreateSerializer
 )
+
+
+class SuggestedContactsView(APIView):
+    def get(self, request):
+        user = request.user
+        cuenta = user.cuenta
+
+        # 1. Get recent movements (limit last 50)
+        movimientos = (
+            Movimiento.objects
+            .filter(cuenta=cuenta)
+            .order_by("-creado_en")[:50]
+        )
+
+        referencias = movimientos.values_list("referencia", flat=True)
+
+        # 2. For each reference, find the "counterparty" movement
+        contraparte_movimientos = (
+            Movimiento.objects
+            .filter(referencia__in=referencias)
+            .exclude(cuenta=cuenta)
+            .select_related("cuenta__usuario")
+            .order_by("-creado_en")
+        )
+
+        # 3. Extract users
+        sugeridos = []
+        seen = set()
+
+        for mov in contraparte_movimientos:
+            usuario = mov.cuenta.usuario
+
+            # Skip duplicates
+            if usuario.id in seen:
+                continue
+            seen.add(usuario.id)
+
+            # Skip yourself
+            if usuario.id == user.id:
+                continue
+
+            # Skip users already in contacts
+            if usuario in user.contactos.all():
+                continue
+
+            sugeridos.append(usuario)
+
+        # Limit to top 5
+        sugeridos = sugeridos[:5]
+
+        serializer = UsuarioSuggestionSerializer(sugeridos, many=True)
+        return Response(serializer.data)
+
+class ContactosView(APIView):
+    # LIST CONTACTS
+    def get(self, request):
+        contactos = request.user.contactos.all()
+        serializer = ContactoSerializer(contactos, many=True)
+        return Response(serializer.data)
+
+    # ADD CONTACT
+    def post(self, request):
+        contacto_id = request.data.get("contacto_id")
+
+        if not contacto_id:
+            return Response(
+                {"detail": "contacto_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        contacto = get_object_or_404(Usuario, id=contacto_id)
+
+        if contacto == request.user:
+            return Response(
+                {"detail": "You cannot add yourself as a contact."},
+                status=400,
+            )
+
+        request.user.contactos.add(contacto)
+
+        return Response({"detail": "Contact added successfully."})
+
+    # REMOVE CONTACT
+    def delete(self, request):
+        contacto_id = request.data.get("contacto_id")
+
+        if not contacto_id:
+            return Response(
+                {"detail": "contacto_id is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        contacto = get_object_or_404(Usuario, id=contacto_id)
+
+        request.user.contactos.remove(contacto)
+
+        return Response({"detail": "Contact removed successfully."})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admin / staff sees ALL accounts
+        if user.is_staff or user.is_superuser:
+            return Usuario.objects.all()
+
+        # Normal user sees ONLY their own account
+        return Usuario.objects.filter(usuario=user)
+
+class UsuarioMeView(APIView):
+    def get(self, request):
+        return Response(UsuarioSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = UsuarioSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class SolicitudPrestamoViewSet(viewsets.ModelViewSet):
     queryset = SolicitudPrestamo.objects.all()
     serializer_class = SolicitudPrestamoSerializer
 
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_staff or user.is_superuser:
+            return Cuenta.objects.all()
+        
+        return SolicitudPrestamo.objects.filter(usuario=user)
+
 
 class SesionViewSet(viewsets.ModelViewSet):
-    queryset = Sesion.objects.all()
     serializer_class = SesionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Solo las sesiones del usuario autenticado
+        return Sesion.objects.filter(usuario=self.request.user)
+
+    def perform_create(self, serializer):
+        # La IP del request y el user se asignan automáticamente
+        ip = self.request.META.get("REMOTE_ADDR")
+
+        serializer.save(
+            usuario=self.request.user,
+            ip=ip,
+        )
+
+    @action(detail=True, methods=["post"])
+    def cerrar(self, request, pk=None):
+        sesion = self.get_object()
+
+        sesion.is_activa = False
+        sesion.expirada_en = timezone.now()
+        sesion.save()
+
+        return Response({"message": "Sesión cerrada correctamente."})
+
+
 
 
 class PrestamoViewSet(viewsets.ModelViewSet):
-    queryset = Prestamo.objects.all()
-    serializer_class = PrestamoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Prestamo.objects.filter(usuario=self.request.user)
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return PrestamoCreateSerializer
+        return PrestamoSerializer
 
     def perform_create(self, serializer):
-        prestamo = serializer.save()
+        # 1. Save loan
+        prestamo = serializer.save(
+            usuario=self.request.user,
+            estado=Prestamo.Estado.APROBADO,
+            fecha_desembolso=timezone.now()
+        )
+
+         
+        prestamo.tna, prestamo.tep, prestamo.cft = InteresService.calcular_intereses(prestamo)
+        prestamo.save()
+
+        # 3. Generate cuotas based on amortization system
         prestamo.generar_cuotas()
 
 
-class CuotaViewSet(viewsets.ModelViewSet):
-    queryset = Cuota.objects.all()
-    serializer_class = CuotaSerializer
-
-
-class PagoViewSet(viewsets.ModelViewSet):
-    queryset = Pago.objects.all()
+class PagoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PagoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Pago.objects.filter(cuota__prestamo__usuario=self.request.user)
 
 
-class NotificacionViewSet(viewsets.ModelViewSet):
-    queryset = Notificacion.objects.all()
-    serializer_class = NotificacionSerializer
+class CuotaViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CuotaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Cuota.objects.filter(prestamo__usuario=self.request.user)
+
 
 class NotificacionReadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -110,12 +289,14 @@ class NotificacionReadView(APIView):
             noti = Notificacion.objects.get(pk=pk, usuario=request.user)
         except Notificacion.DoesNotExist:
             return Response({"detail": "No encontrada."}, status=404)
-        noti.leida = True
-        noti.save()
 
-        return Response({"message": "Notificación marcada como leída."})
+        if not noti.leida:
+            noti.leida = True
+            noti.save()
 
-class NotificacionListView(viewsets.generics.ListAPIView):
+        return Response({"message": "Notificación marcada como leída."}, status=200)
+
+class NotificacionListView(ListAPIView):
     serializer_class = NotificacionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -124,32 +305,6 @@ class NotificacionListView(viewsets.generics.ListAPIView):
             usuario=self.request.user
         ).order_by("-creado_en")
 
-class LookupCuentaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request):
-        cvu = request.data.get("cvu")
-        alias = request.data.get("alias")
-
-        try:
-            if cvu:
-                cuenta = Cuenta.objects.get(cvu=cvu)
-            elif alias:
-                cuenta = Cuenta.objects.get(alias=alias)
-            else:
-                return Response({"detail": "Debe proporcionar CVU o Alias"}, status=400)
-                
-        except Cuenta.DoesNotExist:
-            return Response({"detail": "Cuenta no encontrada"}, status=404)
-        except Exception as e:
-            return Response({"detail": str(e)}, status=500)
-
-        return Response({
-            "exists": True,
-            "cvu": cuenta.cvu,
-            "alias": cuenta.alias,
-            "propietario": f"{cuenta.usuario.first_name} {cuenta.usuario.last_name}",
-        })
 
 class MovimientoListView(viewsets.generics.ListAPIView):
     serializer_class = MovimientoSerializer
@@ -162,20 +317,39 @@ class MovimientoListView(viewsets.generics.ListAPIView):
 
 
 class CuentaViewSet(viewsets.ModelViewSet):
-    queryset = Cuenta.objects.all()
     serializer_class = CuentaSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def list(self, request):
-        # Return only my own account
-        cuenta = request.user.cuenta
-        serializer = self.get_serializer(cuenta)
-        return Response([serializer.data])
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admin / staff sees ALL accounts
+        if user.is_staff or user.is_superuser:
+            return Cuenta.objects.all()
+
+        # Normal user sees ONLY their own account
+        return Cuenta.objects.filter(usuario=user)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Admin → get ALL accounts
+        User → get ONLY their account
+        """
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         cuenta = self.get_object()
+
+        # Admin can view anything
+        if request.user.is_staff or request.user.is_superuser:
+            return super().retrieve(request, *args, **kwargs)
+
+        # Normal user: only their own account
         if cuenta.usuario != request.user:
             return Response({"detail": "No autorizado."}, status=403)
+
         return super().retrieve(request, *args, **kwargs)
 
 
@@ -184,12 +358,25 @@ class CuentaVinculadaViewSet(viewsets.ModelViewSet):
     serializer_class = CuentaVinculadaSerializer
 
 
-class MovimientoViewSet(viewsets.ModelViewSet):
-    queryset = Movimiento.objects.all()
+class MovimientoViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MovimientoSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
+    def get_queryset(self):
+        # Only movements from the authenticated user's account
+        return Movimiento.objects.filter(
+            cuenta=self.request.user.cuenta
+        ).order_by("-creado_en")
 
+    def retrieve(self, request, *args, **kwargs):
+        movimiento = self.get_object()
 
+        # Extra security check
+        if movimiento.cuenta.usuario != request.user:
+            return Response({"detail": "No autorizado."}, status=403)
+
+        return super().retrieve(request, *args, **kwargs)
+    
 
 class SimuladorPrestamoView(APIView):
     def post(self, request, *args, **kwargs):
@@ -237,33 +424,25 @@ class SimuladorPrestamoView(APIView):
             status=status.HTTP_200_OK,
         )
     
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Extiende el serializer de SimpleJWT para incluir los datos del usuario
-    en la respuesta de login.
-    """
-
-    def validate(self, attrs):
-        data = super().validate(attrs)  # esto genera access + refresh
-        user = self.user
-
-        # Agregamos datos del usuario
-        data["user"] = UsuarioSerializer(user).data
-
-        # Opcional: si querés mantener compatibilidad con `token`:
-        # data["token"] = data["access"]
-
-        return data
 
 
 class LoginView(TokenObtainPairView):
-    """
-    POST /api/auth/login/
-    Body: { "username": "...", "password": "..." }
-    Respuesta: { "refresh": "...", "access": "...", "user": { ... } }
-    """
-    permission_classes = [permissions.AllowAny]
     serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        if response.status_code == 200:
+            user = Usuario.objects.get(id=response.data["user"]["id"])
+
+            Sesion.objects.create(
+                usuario=user,
+                dispositivo=request.headers.get("User-Agent", "Desconocido"),
+                ip=request.META.get("REMOTE_ADDR"),
+            )
+
+        return response
     
 
 class LogoutView(APIView):
@@ -283,7 +462,11 @@ class SignUpView(APIView):
     @transaction.atomic
     def post(self, request, *args, **kwargs):
         serializer = SignUpSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            print("SignUp Validation Errors:", e.detail)
+            raise e
         user = serializer.save()
 
         # Crear tokens JWT para el nuevo usuario
@@ -423,8 +606,6 @@ class ParsearQRView(APIView):
         )
 
 class PagarQRView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
     @transaction.atomic
     def post(self, request, *args, **kwargs):
         serializer = QRPagarSerializer(data=request.data, context={"request": request})
@@ -528,14 +709,45 @@ class PagarQRView(APIView):
             status=status.HTTP_200_OK,
         )
     
+class LookupCuentaView(APIView):
+    def post(self, request):
+        cvu = request.data.get("cvu")
+        alias = request.data.get("alias")
 
+        try:
+            if cvu:
+                cuenta = Cuenta.objects.get(cvu=cvu)
+            elif alias:
+                cuenta = Cuenta.objects.get(alias=alias)
+            else:
+                return Response({"detail": "Debe proporcionar CVU o Alias"}, status=400)
+                
+        except Cuenta.DoesNotExist:
+            return Response({"detail": "Cuenta no encontrada"}, status=404)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=500)
+
+        return Response({
+            "exists": True,
+            "cvu": cuenta.cvu,
+            "alias": cuenta.alias,
+            "propietario": f"{cuenta.usuario.first_name} {cuenta.usuario.last_name}",
+        })
+    
 class TransferenciaView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
     def post(self, request):
         origen = request.user.cuenta
+
         cvu_destino = request.data.get("cvu_destino")
-        monto = Decimal(request.data.get("monto"))
+        monto_raw = request.data.get("monto")
+
+        if not cvu_destino or not monto_raw:
+            return Response({"message": "Faltan datos."}, status=400)
+
+        try:
+            monto = Decimal(monto_raw)
+        except:
+            return Response({"message": "Monto inválido."}, status=400)
 
         try:
             destino = Cuenta.objects.get(cvu=cvu_destino)
@@ -548,7 +760,8 @@ class TransferenciaView(APIView):
             )
         except ValueError as e:
             return Response({"message": str(e)}, status=400)
-        
+
+        # Notificaciones
         NotificationService.notificar_envio(
             usuario=origen.usuario,
             monto=monto,
@@ -561,6 +774,11 @@ class TransferenciaView(APIView):
             alias_origen=origen.alias
         )
 
+        return Response({
+            "message": "Transferencia realizada con éxito",
+            "referencia": referencia,
+        })
+
 
         return Response({
             "message": "Transferencia realizada con éxito",
@@ -571,10 +789,14 @@ class ComprobanteDownloadView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, referencia):
+        # Sanitize referencia
+        if not referencia.isalnum():
+            return Response({"message": "Referencia inválida."}, status=400)
+
         try:
             movimiento = Movimiento.objects.get(
                 referencia=referencia,
-                cuenta=request.user.cuenta,  # user can only download THEIR comprobantes
+                cuenta=request.user.cuenta,
                 tipo=Movimiento.Tipo.DEBITO
             )
         except Movimiento.DoesNotExist:
@@ -589,7 +811,9 @@ class ComprobanteDownloadView(APIView):
                 status=404
             )
 
+        # Option A: return just the URL (like you already do)
         return Response({"url": movimiento.comprobante.url})
+
 
 
 

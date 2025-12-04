@@ -54,7 +54,19 @@ class Usuario(AbstractUser):
         VERIFICADO = "verificado", "Verificado"
         BLOQUEADO = "bloqueado", "Bloqueado"
 
+    contactos = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        related_name="contactado_por",
+        blank=True,
+    )
+
     dni = models.BigIntegerField(unique=True)
+    userpic = models.ImageField(
+        upload_to="usuarios/fotos_perfil/",
+        null=True,
+        blank=True,
+    )
     fecha_nacimiento = models.DateField(null=True)
     telefono = models.CharField(max_length=20)
     estado_verificacion = models.CharField(
@@ -279,7 +291,6 @@ class Cuenta(models.Model):
     saldo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     alias = models.CharField(max_length=50, unique=True)
 
-    referencia = models.CharField(max_length=64, null=True, blank=True)
 
     usuario = models.OneToOneField(
         Usuario,
@@ -324,9 +335,8 @@ class Movimiento(models.Model):
         null=True,
         blank=True,
     )
-    referencia = models.CharField(max_length=100, null=True, blank=True)
-    descripcion = models.TextField(null=True, blank=True)
-
+    descripcion = models.CharField(max_length=255, blank=True, null=True)
+    referencia = models.CharField(max_length=64, null=True, blank=True)
     cuenta = models.ForeignKey(
         Cuenta,
         on_delete=models.CASCADE,

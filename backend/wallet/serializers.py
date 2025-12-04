@@ -37,8 +37,6 @@ class NotificacionSerializer(serializers.ModelSerializer):
             "creado_en",
             "leida",
         ]
-
-        # Fields the user should never set manually
         read_only_fields = [
             "id",
             "titulo",
@@ -48,8 +46,6 @@ class NotificacionSerializer(serializers.ModelSerializer):
             "creado_en",
         ]
 
-        
-        write_only_fields = ["leida"]
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,10 +61,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "telefono",
             "estado_verificacion",
             "score",
+            "userpic",
         ]
         read_only_fields = [
             "estado_verificacion",
-            "score",
+            #"score", para probar
         ]
         extra_kwargs = {
             "password": {"write_only": True},
@@ -97,26 +94,124 @@ class SolicitudPrestamoSerializer(serializers.ModelSerializer):
 class SesionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Sesion
-        fields = "__all__"
+        fields = [
+            "id",
+            "dispositivo",
+            "ip",
+            "creado_en",
+            "expirada_en",
+            "ultima_actividad",
+            "is_activa",
+        ]
 
+        read_only_fields = [
+            "id",
+            "creado_en",
+            "expirada_en",
+            "ultima_actividad",
+            "is_activa",
+            "ip",  # la IP debe venir del request, no del usuario
+        ]
 
-class PrestamoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Prestamo
-        fields = "__all__"
 
 
 class CuotaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuota
-        fields = "__all__"
+        fields = [
+            "id",
+            "fecha_vencimiento",
+            "capital",
+            "interes",
+            "impuestos",
+            "saldo_cuota",
+            "estado",
+        ]
+        read_only_fields = fields  
 
+class ContactoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "userpic",
+        ]
+
+class UsuarioSuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "userpic",
+        ]
+
+class PrestamoSerializer(serializers.ModelSerializer):
+    cuotas = CuotaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Prestamo
+        fields = [
+            "id",
+            "monto",
+            "plazo_meses",
+            "tna",
+            "tep",
+            "cft",
+            "sistema",
+            "estado",
+            "fecha_desembolso",
+            "ultima_refinanciacion",
+            "cuotas",
+        ]
+        read_only_fields = fields
+
+class PrestamoCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Prestamo
+        fields = [
+            "monto",
+            "plazo_meses",
+            "sistema",
+        ]
+
+        # The user must NOT send:
+        # tna, tep, cft, estado, fecha_desembolso, ultima_refinanciacion, solicitud
+        read_only_fields = []
+    
+    def validate_monto(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El monto debe ser mayor a 0.")
+        return value
+    
+    def validate_plazo_meses(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El plazo debe ser mayor que 0.")
+        return value
 
 class PagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago
-        fields = "__all__"
-
+        fields = [
+            "id",
+            "importe",
+            "fecha_pago",
+            "comprobante",
+            "cuota",
+        ]
+        read_only_fields = [
+            "id",
+            "importe",
+            "fecha_pago",
+            "cuota",
+        ]
 
 class CuentaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -128,9 +223,15 @@ class CuentaSerializer(serializers.ModelSerializer):
             "saldo",
             "estado_verificacion",
         ]
+
+        read_only_fields = [
+            "saldo",
+            "cvu",
+            "alias",
+        ]
+
 class LookupCuentaSerializer(serializers.Serializer):
     cvu = serializers.CharField()
-
 
 class CuentaVinculadaSerializer(serializers.ModelSerializer):
     class Meta:
@@ -148,7 +249,11 @@ class MovimientoSerializer(serializers.ModelSerializer):
             "creado_en",
             "referencia",
             "descripcion",
+            "comprobante",
         ]
+
+        read_only_fields = fields
+        
 
 
 class SimuladorInputSerializer(serializers.Serializer):
@@ -209,7 +314,7 @@ class SimuladorResultadoSerializer(serializers.Serializer):
 
 class SignUpSerializer(serializers.ModelSerializer):
     permission_classes = [permissions.AllowAny]
-    
+
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
 
@@ -376,4 +481,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["user"] = UsuarioSerializer(user).data
 
         return data
+    
+
     

@@ -9,10 +9,10 @@ from .views import (
     PrestamoViewSet,
     CuotaViewSet,
     PagoViewSet,
-    NotificacionViewSet,
     CuentaViewSet,
     CuentaVinculadaViewSet,
     MovimientoViewSet,
+    MovimientoListView,
     MovimientoListView,
     SimuladorPrestamoView,
     LoginView,
@@ -27,6 +27,9 @@ from .views import (
     NotificacionListView,
     NotificacionReadView,
     ComprobanteDownloadView,
+    UsuarioMeView,
+    ContactosView,
+    SuggestedContactsView,
 )
 
 router = DefaultRouter()
@@ -36,7 +39,6 @@ router.register(r'sesiones', SesionViewSet, basename='sesion')
 router.register(r'prestamos', PrestamoViewSet, basename='prestamo')
 router.register(r'cuotas', CuotaViewSet, basename='cuota')
 router.register(r'pagos', PagoViewSet, basename='pago')
-router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 router.register(r'cuentas', CuentaViewSet, basename='cuenta')
 router.register(r'cuentas-vinculadas', CuentaVinculadaViewSet, basename='cuenta-vinculada')
 
@@ -50,7 +52,6 @@ urlpatterns = [
     path("qr/generar/", GenerarQRView.as_view(), name="qr-generar"),
     path("qr/parsear/", ParsearQRView.as_view(), name="qr-parsear"),
     path("qr/pagar/", PagarQRView.as_view(), name="qr-pagar"),
-    path("transferir/", TransferenciaView.as_view(), name="transfererir"),
     path("transferir/lookup/", LookupCuentaView.as_view()),
     path("transferencias/", TransferenciaView.as_view(), name="transferencias"),
     path("movimientos/", MovimientoListView.as_view()),
@@ -58,5 +59,8 @@ urlpatterns = [
     path("notificaciones/", NotificacionListView.as_view()),
     path("notificaciones/<int:pk>/leer/", NotificacionReadView.as_view()),
     path("comprobantes/<str:referencia>/", ComprobanteDownloadView.as_view()),
+    path("usuario/me/", UsuarioMeView.as_view()),
+    path("contactos/", ContactosView.as_view(), name="contactos"),
+    path("contactos/sugeridos/", SuggestedContactsView.as_view(), name="contactos-sugeridos"),
     path("", include(router.urls)),
 ]

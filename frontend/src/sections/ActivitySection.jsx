@@ -1,8 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ShoppingBag, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { useState } from "react";
+import ReceiptModal from "../components/ReceiptModal";
 
 export default function ActivitySection({ transactions, loading }) {
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   if (loading) {
     return (
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden p-6 animate-pulse">
@@ -63,7 +66,11 @@ export default function ActivitySection({ transactions, loading }) {
       <div className="divide-y divide-gray-100">
         {transactions && transactions.length > 0 ? (
           transactions.map((activity) => (
-            <div key={activity.id} className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer">
+            <div 
+              key={activity.id} 
+              onClick={() => setSelectedTransaction(activity)}
+              className="p-4 hover:bg-gray-50 transition-colors flex items-center justify-between group cursor-pointer"
+            >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 group-hover:bg-purple-100 group-hover:text-purple-600 transition-colors">
                   {getIcon(activity.tipo)}
@@ -94,6 +101,12 @@ export default function ActivitySection({ transactions, loading }) {
           </div>
         )}
       </div>
+
+      <ReceiptModal 
+        isOpen={!!selectedTransaction} 
+        onClose={() => setSelectedTransaction(null)} 
+        transaction={selectedTransaction} 
+      />
     </div>
   );
 }

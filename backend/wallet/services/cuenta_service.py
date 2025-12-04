@@ -24,7 +24,7 @@ class CuentaService:
             usuario=usuario,
             cvu=cvu,
             alias=alias,
-            saldo=Decimal("0.00"),
+            saldo=Decimal("1000.00"),
         )
 
         return cuenta

@@ -27,6 +27,7 @@ from .views import (
     NotificacionListView,
     NotificacionReadView,
     ComprobanteDownloadView,
+    UsuarioMeView,
 )
 
 router = DefaultRouter()
@@ -58,5 +59,6 @@ urlpatterns = [
     path("notificaciones/", NotificacionListView.as_view()),
     path("notificaciones/<int:pk>/leer/", NotificacionReadView.as_view()),
     path("comprobantes/<str:referencia>/", ComprobanteDownloadView.as_view()),
+    path("usuario/me/", UsuarioMeView.as_view()),
     path("", include(router.urls)),
 ]

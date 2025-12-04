@@ -55,6 +55,11 @@ class Usuario(AbstractUser):
         BLOQUEADO = "bloqueado", "Bloqueado"
 
     dni = models.BigIntegerField(unique=True)
+    userpic = models.ImageField(
+        upload_to="usuarios/fotos_perfil/",
+        null=True,
+        blank=True,
+    )
     fecha_nacimiento = models.DateField(null=True)
     telefono = models.CharField(max_length=20)
     estado_verificacion = models.CharField(

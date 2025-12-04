@@ -65,6 +65,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "telefono",
             "estado_verificacion",
             "score",
+            "userpic",
         ]
         read_only_fields = [
             "estado_verificacion",
@@ -134,7 +135,7 @@ class PrestamoSerializer(serializers.ModelSerializer):
             "cuotas",
         ]
         read_only_fields = fields
-        
+
 class PagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago

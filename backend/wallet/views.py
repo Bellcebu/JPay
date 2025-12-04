@@ -67,6 +67,31 @@ from .serializers import (
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admin / staff sees ALL accounts
+        if user.is_staff or user.is_superuser:
+            return Cuenta.objects.all()
+
+        # Normal user sees ONLY their own account
+        return Cuenta.objects.filter(usuario=user)
+
+class UsuarioMeView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response(UsuarioSerializer(request.user).data)
+
+    def patch(self, request):
+        serializer = UsuarioSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class SolicitudPrestamoViewSet(viewsets.ModelViewSet):
@@ -164,20 +189,39 @@ class MovimientoListView(viewsets.generics.ListAPIView):
 
 
 class CuentaViewSet(viewsets.ModelViewSet):
-    queryset = Cuenta.objects.all()
     serializer_class = CuentaSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def list(self, request):
-        # Return only my own account
-        cuenta = request.user.cuenta
-        serializer = self.get_serializer(cuenta)
-        return Response([serializer.data])
+    def get_queryset(self):
+        user = self.request.user
+
+        # Admin / staff sees ALL accounts
+        if user.is_staff or user.is_superuser:
+            return Cuenta.objects.all()
+
+        # Normal user sees ONLY their own account
+        return Cuenta.objects.filter(usuario=user)
+
+    def list(self, request, *args, **kwargs):
+        """
+        Admin → get ALL accounts
+        User → get ONLY their account
+        """
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
     def retrieve(self, request, *args, **kwargs):
         cuenta = self.get_object()
+
+        # Admin can view anything
+        if request.user.is_staff or request.user.is_superuser:
+            return super().retrieve(request, *args, **kwargs)
+
+        # Normal user: only their own account
         if cuenta.usuario != request.user:
             return Response({"detail": "No autorizado."}, status=403)
+
         return super().retrieve(request, *args, **kwargs)
 
 

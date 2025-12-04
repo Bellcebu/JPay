@@ -208,6 +208,8 @@ class SimuladorResultadoSerializer(serializers.Serializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    permission_classes = [permissions.AllowAny]
+    
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
 

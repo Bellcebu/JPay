@@ -5,6 +5,7 @@ import SessionPage from './pages/SessionPage';
 import HomePage from './pages/HomePage';
 import ProfilePage from './pages/ProfilePage';
 import EditarPerfilPage from './pages/EditarPerfilPage';
+import SolicitudPrestamoPage from './pages/SolicitudPrestamoPage';
 
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
       <Route path="/dashboard" element={<HomePage />} />
       <Route path="/perfil" element={<ProfilePage/>} />
       <Route path="/perfil/editar" element={<EditarPerfilPage/>} />
+      <Route path="/prestamo/solicitar" element={<SolicitudPrestamoPage/>} />
     </Routes>
   );
 }

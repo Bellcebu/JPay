@@ -16,7 +16,7 @@ export default function SidebarLayout({ children }) {
     const navItems = [
         { path: "/perfil", label: "Perfil", icon: User },
         { path: "/home", label: "Home", icon: Home },
-        { path: "/transferencias", label: "Transferencias", icon: CreditCard },
+        { path: "/transfer", label: "Transferencias", icon: CreditCard },
         { path: "/actividad", label: "Mi Actividad", icon: Activity },
         { path: "/prestamos", label: "Préstamos", icon: FileText },
         { path: "/ajustes", label: "Ajustes", icon: Settings },

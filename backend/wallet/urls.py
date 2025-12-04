@@ -39,7 +39,7 @@ router.register(r'pagos', PagoViewSet, basename='pago')
 router.register(r'notificaciones', NotificacionViewSet, basename='notificacion')
 router.register(r'cuentas', CuentaViewSet, basename='cuenta')
 router.register(r'cuentas-vinculadas', CuentaVinculadaViewSet, basename='cuenta-vinculada')
-router.register(r'movimientos', MovimientoViewSet, basename='movimiento')
+
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -52,7 +52,7 @@ urlpatterns = [
     path("qr/pagar/", PagarQRView.as_view(), name="qr-pagar"),
     path("transferir/", TransferenciaView.as_view(), name="transfererir"),
     path("transferir/lookup/", LookupCuentaView.as_view()),
-    path("transferir/enviar/", TransferenciaView.as_view()),
+    path("transferencias/", TransferenciaView.as_view(), name="transferencias"),
     path("movimientos/", MovimientoListView.as_view()),
     path("auth/kyc/dni/", KYCUploadDNIView.as_view(), name="kyc-dni-upload"),
     path("notificaciones/", NotificacionListView.as_view()),

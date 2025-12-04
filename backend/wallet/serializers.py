@@ -145,9 +145,9 @@ class MovimientoSerializer(serializers.ModelSerializer):
             "id",
             "tipo",
             "monto",
-            "descripcion",
             "creado_en",
             "referencia",
+            "descripcion",
         ]
 
 

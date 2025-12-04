@@ -18,7 +18,6 @@ const HomePage = () => {
                 ]);
 
                 if (accountData) {
-                    // Merge user data into account object if available
                     const fullAccountData = userData ? { ...accountData, usuario: userData } : accountData;
                     setAccount(fullAccountData);
                 }

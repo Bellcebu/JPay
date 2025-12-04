@@ -165,6 +165,58 @@ export const api = {
     }
   },
 
+  lookupAccount: async (data) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+
+    try {
+      const response = await fetch(`${BASE_URL}/transferir/lookup/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Error al buscar cuenta');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Lookup Account error:', error);
+      throw error;
+    }
+  },
+
+  createTransfer: async (data) => {
+    const token = localStorage.getItem('token');
+    if (!token) throw new Error('No authentication token found');
+
+    try {
+      const response = await fetch(`${BASE_URL}/transferencias/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Error al realizar la transferencia');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Create Transfer error:', error);
+      throw error;
+    }
+  },
+
   logout: async () => {
     const token = localStorage.getItem('token');
     if (token) {

@@ -324,6 +324,8 @@ class Movimiento(models.Model):
         null=True,
         blank=True,
     )
+    referencia = models.CharField(max_length=100, null=True, blank=True)
+    descripcion = models.TextField(null=True, blank=True)
 
     cuenta = models.ForeignKey(
         Cuenta,

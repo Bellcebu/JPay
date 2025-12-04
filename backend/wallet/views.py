@@ -110,7 +110,6 @@ class NotificacionReadView(APIView):
             noti = Notificacion.objects.get(pk=pk, usuario=request.user)
         except Notificacion.DoesNotExist:
             return Response({"detail": "No encontrada."}, status=404)
-
         noti.leida = True
         noti.save()
 
@@ -130,19 +129,27 @@ class LookupCuentaView(APIView):
 
     def post(self, request):
         cvu = request.data.get("cvu")
+        alias = request.data.get("alias")
 
         try:
-            cuenta = Cuenta.objects.get(cvu=cvu)
+            if cvu:
+                cuenta = Cuenta.objects.get(cvu=cvu)
+            elif alias:
+                cuenta = Cuenta.objects.get(alias=alias)
+            else:
+                return Response({"detail": "Debe proporcionar CVU o Alias"}, status=400)
+                
         except Cuenta.DoesNotExist:
-            return Response({"exists": False}, status=404)
+            return Response({"detail": "Cuenta no encontrada"}, status=404)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=500)
 
         return Response({
             "exists": True,
             "cvu": cuenta.cvu,
             "alias": cuenta.alias,
-            "titular": f"{cuenta.usuario.nombre} {cuenta.usuario.apellido}",
+            "propietario": f"{cuenta.usuario.first_name} {cuenta.usuario.last_name}",
         })
-
 
 class MovimientoListView(viewsets.generics.ListAPIView):
     serializer_class = MovimientoSerializer

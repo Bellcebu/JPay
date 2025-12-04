@@ -37,28 +37,28 @@ const ProfilePage = () => {
             description: "Datos personales y de tu cuenta.",
             icon: User,
             path: "/perfil/info",
-            color: "text-blue-500"
+            color: "text-purple-600"
         },
         {
             title: "Seguridad",
             description: "Tenés configurada la seguridad de tu cuenta.",
             icon: Shield,
             path: "/perfil/seguridad",
-            color: "text-green-500"
+            color: "text-purple-600"
         },
         {
             title: "Sesiones conectadas",
             description: "Administra tus dispositivos.",
             icon: Smartphone,
             path: "/sessions",
-            color: "text-purple-500"
+            color: "text-purple-600"
         },
         {
             title: "Tarjetas",
             description: "Tarjetas guardadas en tu cuenta.",
             icon: CreditCard,
             path: "/tarjetas",
-            color: "text-orange-500"
+            color: "text-purple-600"
         }
     ];
 
@@ -92,9 +92,6 @@ const ProfilePage = () => {
                                     <div className={`p-3 rounded-lg bg-gray-50 group-hover:bg-purple-50 transition-colors ${item.color}`}>
                                         <Icon size={24} />
                                     </div>
-                                    {index === 0 && (
-                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    )}
                                 </div>
                                 <h3 className="font-semibold text-lg text-gray-800 mb-2 group-hover:text-purple-700 transition-colors">
                                     {item.title}

@@ -25,8 +25,8 @@ export default function BalanceSection({ account, loading }) {
   const balance = account?.saldo ? `$ ${parseFloat(account.saldo).toLocaleString('es-AR', { minimumFractionDigits: 2 })}` : "$ 0,00";
 
   const actions = [
-    { label: "Transferir", to: "/transferencias", icon: ArrowUpRight },
-    { label: "Ingresar", to: "/ingresar", icon: ArrowDownLeft },
+    { label: "Transferir", to: "/transfer", icon: ArrowUpRight },
+    { label: "Ingresar", to: "/deposit", icon: ArrowDownLeft },
     { label: "Pagar", to: "/pagar", icon: CreditCard },
   ];
 

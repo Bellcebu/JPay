@@ -7,6 +7,8 @@ import ProfilePage from './pages/ProfilePage';
 import ProfileInfoPage from './pages/ProfileInfoPage';
 import EditarPerfilPage from './pages/EditarPerfilPage';
 import SolicitudPrestamoPage from './pages/SolicitudPrestamoPage';
+import TransferPage from './pages/TransferPage';
+import DepositPage from './pages/DepositPage';
 
 
 function App() {
@@ -20,6 +22,8 @@ function App() {
       <Route path="/perfil/info" element={<ProfileInfoPage/>} />
       <Route path="/perfil/editar" element={<EditarPerfilPage/>} />
       <Route path="/prestamo/solicitar" element={<SolicitudPrestamoPage/>} />
+      <Route path="/transfer" element={<TransferPage/>} />
+      <Route path="/deposit" element={<DepositPage/>} />
     </Routes>
   );
 }

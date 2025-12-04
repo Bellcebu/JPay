@@ -32,7 +32,7 @@ class PDFComprobanteService:
         # Sender
         c.drawString(50, height - 190, "Origen:")
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, height - 210, f"{movimiento.cuenta.usuario.nombre} {movimiento.cuenta.usuario.apellido}")
+        c.drawString(50, height - 210, f"{movimiento.cuenta.usuario.first_name} {movimiento.cuenta.usuario.last_name}")
         c.setFont("Helvetica", 12)
         c.drawString(50, height - 230, f"Alias: {movimiento.cuenta.alias}")
         c.drawString(50, height - 250, f"CVU: {movimiento.cuenta.cvu}")
@@ -42,7 +42,7 @@ class PDFComprobanteService:
 
         c.drawString(50, height - 290, "Destino:")
         c.setFont("Helvetica-Bold", 12)
-        c.drawString(50, height - 310, f"{destino.usuario.nombre} {destino.usuario.apellido}")
+        c.drawString(50, height - 310, f"{destino.usuario.first_name} {destino.usuario.last_name}")
         c.setFont("Helvetica", 12)
         c.drawString(50, height - 330, f"Alias: {destino.alias}")
         c.drawString(50, height - 350, f"CVU: {destino.cvu}")

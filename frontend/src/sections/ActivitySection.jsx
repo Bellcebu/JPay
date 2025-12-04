@@ -73,7 +73,10 @@ export default function ActivitySection({ transactions, loading }) {
                     {activity.descripcion || (activity.tipo === 'transferencia' ? 'Transferencia' : 'Movimiento')}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {activity.tipo === 'credito' ? 'Ingreso de dinero' : 'Pago realizado'}
+                    {activity.tipo === 'credito' 
+                      ? (activity.descripcion?.toLowerCase().includes('transferencia') ? 'Transferencia recibida' : 'Ingreso de dinero')
+                      : (activity.descripcion?.toLowerCase().includes('transferencia') ? 'Transferencia enviada' : 'Pago realizado')
+                    }
                   </p>
                 </div>
               </div>

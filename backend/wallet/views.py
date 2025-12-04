@@ -4,8 +4,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from .utils.simulacion import simular_prestamo
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 
@@ -17,6 +15,9 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from decimal import Decimal
 from django.db import transaction
 from .utils.qr_utils import QRPaymentData, encode_qr_payload, decode_qr_payload
+from .services.transfer_service import TransferService
+from wallet.services.notification_service import NotificationService
+
 
 from wallet.utils.biometrics import get_biometric_provider
 
@@ -35,6 +36,7 @@ from .models import (
     QRPaymentIntent,
     BiometricVerification,
     KYCVerification,
+    LookupCuentaSerializer,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -55,7 +57,6 @@ from .serializers import (
     QRParseSerializer,
     QRParseResultSerializer,
     QRPagarSerializer,
-    TransferenciaSerializer,
     BiometricVerifySerializer,
     KYCDNISerializer,
     SignUpSerializer,
@@ -101,10 +102,74 @@ class NotificacionViewSet(viewsets.ModelViewSet):
     queryset = Notificacion.objects.all()
     serializer_class = NotificacionSerializer
 
+class NotificacionReadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            noti = Notificacion.objects.get(pk=pk, usuario=request.user)
+        except Notificacion.DoesNotExist:
+            return Response({"detail": "No encontrada."}, status=404)
+
+        noti.leida = True
+        noti.save()
+
+        return Response({"message": "Notificación marcada como leída."})
+
+class NotificacionListView(viewsets.generics.ListAPIView):
+    serializer_class = NotificacionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notificacion.objects.filter(
+            usuario=self.request.user
+        ).order_by("-creado_en")
+
+class LookupCuentaView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        cvu = request.data.get("cvu")
+
+        try:
+            cuenta = Cuenta.objects.get(cvu=cvu)
+        except Cuenta.DoesNotExist:
+            return Response({"exists": False}, status=404)
+
+        return Response({
+            "exists": True,
+            "cvu": cuenta.cvu,
+            "alias": cuenta.alias,
+            "titular": f"{cuenta.usuario.nombre} {cuenta.usuario.apellido}",
+        })
+
+
+class MovimientoListView(viewsets.generics.ListAPIView):
+    serializer_class = MovimientoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Movimiento.objects.filter(
+            cuenta=self.request.user.cuenta
+        ).order_by("-creado_en")
+
 
 class CuentaViewSet(viewsets.ModelViewSet):
     queryset = Cuenta.objects.all()
     serializer_class = CuentaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        # Return only my own account
+        cuenta = request.user.cuenta
+        serializer = self.get_serializer(cuenta)
+        return Response([serializer.data])
+
+    def retrieve(self, request, *args, **kwargs):
+        cuenta = self.get_object()
+        if cuenta.usuario != request.user:
+            return Response({"detail": "No autorizado."}, status=403)
+        return super().retrieve(request, *args, **kwargs)
 
 
 class CuentaVinculadaViewSet(viewsets.ModelViewSet):
@@ -459,58 +524,65 @@ class PagarQRView(APIView):
 class TransferenciaView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    @transaction.atomic
-    def post(self, request, *args, **kwargs):
-        serializer = TransferenciaSerializer(data=request.data)
+    def post(self, request):
+        origen = request.user.cuenta
+        cvu_destino = request.data.get("cvu_destino")
+        monto = Decimal(request.data.get("monto"))
+
         try:
-            serializer.is_valid(raise_exception=True)
-        except ValidationError as exc:
+            destino = Cuenta.objects.get(cvu=cvu_destino)
+        except Cuenta.DoesNotExist:
+            return Response({"message": "Cuenta destino no encontrada."}, status=404)
+
+        try:
+            referencia = TransferService.realizar_transferencia(
+                origen, destino, monto
+            )
+        except ValueError as e:
+            return Response({"message": str(e)}, status=400)
+        
+        NotificationService.notificar_envio(
+            usuario=origen.usuario,
+            monto=monto,
+            alias_destino=destino.alias
+        )
+
+        NotificationService.notificar_recepcion(
+            usuario=destino.usuario,
+            monto=monto,
+            alias_origen=origen.alias
+        )
+
+
+        return Response({
+            "message": "Transferencia realizada con éxito",
+            "referencia": referencia,
+        })
+
+class ComprobanteDownloadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, referencia):
+        try:
+            movimiento = Movimiento.objects.get(
+                referencia=referencia,
+                cuenta=request.user.cuenta,  # user can only download THEIR comprobantes
+                tipo=Movimiento.Tipo.DEBITO
+            )
+        except Movimiento.DoesNotExist:
             return Response(
-                {
-                    "message": "Transfer failed. Please fix the errors and try again.",
-                    "errors": exc.detail,
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {"message": "Comprobante no encontrado."},
+                status=404
             )
 
-        cuenta_origen = serializer.validated_data["cuenta_origen_obj"]
-        cuenta_destino = serializer.validated_data["cuenta_destino_obj"]
-        monto = serializer.validated_data["monto"]
-        descripcion = serializer.validated_data.get("descripcion", "")
+        if not movimiento.comprobante:
+            return Response(
+                {"message": "La transferencia no tiene comprobante."},
+                status=404
+            )
 
-        # update balances
-        cuenta_origen.saldo = Decimal(str(cuenta_origen.saldo)) - monto
-        cuenta_destino.saldo = Decimal(str(cuenta_destino.saldo)) + monto
-        cuenta_origen.save()
-        cuenta_destino.save()
+        return Response({"url": movimiento.comprobante.url})
 
-        # movements
-        Movimiento.objects.create(
-            cuenta=cuenta_origen,
-            monto=float(-monto),
-            tipo=Movimiento.Tipo.TRANSFERENCIA,
-            comprobante=None,
-        )
-        Movimiento.objects.create(
-            cuenta=cuenta_destino,
-            monto=float(monto),
-            tipo=Movimiento.Tipo.TRANSFERENCIA,
-            comprobante=None,
-        )
-
-        return Response(
-            {
-                "message": "Transfer completed successfully.",
-                "data": {
-                    "cuenta_origen_id": cuenta_origen.id,
-                    "cuenta_destino_id": cuenta_destino.id,
-                    "monto": str(monto),
-                    "descripcion": descripcion,
-                },
-            },
-            status=status.HTTP_200_OK,
-        )
-    
 
 
 class BiometricVerifyView(APIView):

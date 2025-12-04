@@ -13,6 +13,7 @@ from .views import (
     CuentaViewSet,
     CuentaVinculadaViewSet,
     MovimientoViewSet,
+    MovimientoListView,
     SimuladorPrestamoView,
     LoginView,
     LogoutView,
@@ -22,6 +23,10 @@ from .views import (
     PagarQRView,
     TransferenciaView,
     KYCUploadDNIView,
+    LookupCuentaView,
+    NotificacionListView,
+    NotificacionReadView,
+    ComprobanteDownloadView,
 )
 
 router = DefaultRouter()
@@ -45,7 +50,13 @@ urlpatterns = [
     path("qr/generar/", GenerarQRView.as_view(), name="qr-generar"),
     path("qr/parsear/", ParsearQRView.as_view(), name="qr-parsear"),
     path("qr/pagar/", PagarQRView.as_view(), name="qr-pagar"),
-    path("transferencias/", TransferenciaView.as_view(), name="transferencias"),
+    path("transferir/", TransferenciaView.as_view(), name="transfererir"),
+    path("transferir/lookup/", LookupCuentaView.as_view()),
+    path("transferir/enviar/", TransferenciaView.as_view()),
+    path("movimientos/", MovimientoListView.as_view()),
     path("auth/kyc/dni/", KYCUploadDNIView.as_view(), name="kyc-dni-upload"),
+    path("notificaciones/", NotificacionListView.as_view()),
+    path("notificaciones/<int:pk>/leer/", NotificacionReadView.as_view()),
+    path("comprobantes/<str:referencia>/", ComprobanteDownloadView.as_view()),
     path("", include(router.urls)),
 ]

@@ -279,6 +279,8 @@ class Cuenta(models.Model):
     saldo = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     alias = models.CharField(max_length=50, unique=True)
 
+    referencia = models.CharField(max_length=64, null=True, blank=True)
+
     usuario = models.OneToOneField(
         Usuario,
         null=True,

@@ -6,12 +6,10 @@ class CuentaService:
 
     @staticmethod
     def generar_cvu():
-        # Simulate external CVU provider
         return int("3" + "".join(str(random.randint(0,9)) for _ in range(21)))
 
     @staticmethod
     def generar_alias(usuario):
-        # You can improve this later
         base = f"{usuario.nombre.lower()}.{usuario.apellido.lower()}"
         return base.replace(" ", "") + ".jpay"
 

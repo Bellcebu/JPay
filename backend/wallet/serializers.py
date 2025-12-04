@@ -25,6 +25,31 @@ from .models import (
     KYCVerification,
 )
 
+class NotificacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificacion
+        fields = [
+            "id",
+            "titulo",
+            "cuerpo",
+            "prioridad",
+            "tipo",
+            "creado_en",
+            "leida",
+        ]
+
+        # Fields the user should never set manually
+        read_only_fields = [
+            "id",
+            "titulo",
+            "cuerpo",
+            "prioridad",
+            "tipo",
+            "creado_en",
+        ]
+
+        
+        write_only_fields = ["leida"]
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,16 +118,18 @@ class PagoSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class NotificacionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notificacion
-        fields = "__all__"
-
-
 class CuentaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cuenta
-        fields = "__all__"
+        fields = [
+            "id",
+            "cvu",
+            "alias",
+            "saldo",
+            "estado_verificacion",
+        ]
+class LookupCuentaSerializer(serializers.Serializer):
+    cvu = serializers.CharField()
 
 
 class CuentaVinculadaSerializer(serializers.ModelSerializer):
@@ -114,8 +141,14 @@ class CuentaVinculadaSerializer(serializers.ModelSerializer):
 class MovimientoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movimiento
-        fields = "__all__"
-
+        fields = [
+            "id",
+            "tipo",
+            "monto",
+            "descripcion",
+            "creado_en",
+            "referencia",
+        ]
 
 
 class SimuladorInputSerializer(serializers.Serializer):
@@ -175,6 +208,8 @@ class SimuladorResultadoSerializer(serializers.Serializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    permission_classes = [permissions.AllowAny]
+    
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
 
@@ -284,48 +319,6 @@ class QRPagarSerializer(serializers.Serializer):
         self.context["cuenta_origen"] = cuenta
         return value
 
-
-class TransferenciaSerializer(serializers.Serializer):
-    cuenta_origen_id = serializers.IntegerField()
-    cuenta_destino_id = serializers.IntegerField()
-    monto = serializers.DecimalField(max_digits=12, decimal_places=2)
-    descripcion = serializers.CharField(max_length=255, required=False, allow_blank=True)
-
-    def validate(self, attrs):
-        origen_id = attrs["cuenta_origen_id"]
-        destino_id = attrs["cuenta_destino_id"]
-        monto = attrs["monto"]
-
-        if origen_id == destino_id:
-            raise serializers.ValidationError(
-                {"cuenta_destino_id": ["Origin and destination must be different."]}
-            )
-
-        try:
-            cuenta_origen = Cuenta.objects.get(id=origen_id)
-        except Cuenta.DoesNotExist:
-            raise serializers.ValidationError(
-                {"cuenta_origen_id": ["Source account not found."]}
-            )
-
-        try:
-            cuenta_destino = Cuenta.objects.get(id=destino_id)
-        except Cuenta.DoesNotExist:
-            raise serializers.ValidationError(
-                {"cuenta_destino_id": ["Destination account not found."]}
-            )
-
-        if monto <= 0:
-            raise serializers.ValidationError({"monto": ["Amount must be > 0."]})
-
-        if Decimal(str(cuenta_origen.saldo)) < monto:
-            raise serializers.ValidationError(
-                {"monto": ["Insufficient balance in source account."]}
-            )
-
-        attrs["cuenta_origen_obj"] = cuenta_origen
-        attrs["cuenta_destino_obj"] = cuenta_destino
-        return attrs
     
 
 class BiometricVerifySerializer(serializers.Serializer):
@@ -383,3 +376,4 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data["user"] = UsuarioSerializer(user).data
 
         return data
+    

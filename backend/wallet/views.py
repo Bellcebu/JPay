@@ -8,6 +8,9 @@ from rest_framework.authtoken.models import Token
 from rest_framework.exceptions import ValidationError
 from django.utils import timezone
 
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 
 from decimal import Decimal
@@ -54,6 +57,8 @@ from .serializers import (
     TransferenciaSerializer,
     BiometricVerifySerializer,
     KYCDNISerializer,
+    SignUpSerializer,
+    CustomTokenObtainPairSerializer,
 )
 
 
@@ -157,50 +162,69 @@ class SimuladorPrestamoView(APIView):
             status=status.HTTP_200_OK,
         )
     
-class LoginView(ObtainAuthToken):
-    def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        token = Token.objects.get(key=response.data["token"])
-        user = token.user
-        return Response(
-            {
-                "token": token.key,
-                "user_id": user.pk,
-                "username": user.username,
-                "email": user.email,
-            },
-            status=status.HTTP_200_OK,
-        )
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Extiende el serializer de SimpleJWT para incluir los datos del usuario
+    en la respuesta de login.
+    """
 
+    def validate(self, attrs):
+        data = super().validate(attrs)  # esto genera access + refresh
+        user = self.user
+
+        # Agregamos datos del usuario
+        data["user"] = UsuarioSerializer(user).data
+
+        # Opcional: si querés mantener compatibilidad con `token`:
+        # data["token"] = data["access"]
+
+        return data
+
+
+class LoginView(TokenObtainPairView):
+    """
+    POST /api/auth/login/
+    Body: { "username": "...", "password": "..." }
+    Respuesta: { "refresh": "...", "access": "...", "user": { ... } }
+    """
+    permission_classes = [permissions.AllowAny]
+    serializer_class = CustomTokenObtainPairSerializer
+    
 
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        try:
-            request.user.auth_token.delete()
-        except Token.DoesNotExist:
-            pass
+        """
+        Con JWT simple, el logout real lo hace el frontend
+        (borrando access + refresh).
+        Si después activás blacklist, acá podrías invalidar el refresh token.
+        """
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 class SignUpView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
-        serializer = SignUpSerializer(data=request.data)
+        serializer = SignUpSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        token, _ = Token.objects.get_or_create(user=user)
+        # Crear tokens JWT para el nuevo usuario
+        refresh = RefreshToken.for_user(user)
+        access = refresh.access_token
 
         return Response(
             {
-                "token": token.key,
+                "message": "User created successfully.",
+                "refresh": str(refresh),
+                "access": str(access),
+                # Opcional: también podés agregar "token": str(access) si querés el mismo nombre que antes
+                # "token": str(access),
                 "user": UsuarioSerializer(user).data,
             },
             status=status.HTTP_201_CREATED,
         )
-    
 
 class GenerarQRView(APIView):
     permission_classes = [permissions.IsAuthenticated]

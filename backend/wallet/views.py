@@ -36,7 +36,6 @@ from .models import (
     QRPaymentIntent,
     BiometricVerification,
     KYCVerification,
-    LookupCuentaSerializer,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -61,6 +60,7 @@ from .serializers import (
     KYCDNISerializer,
     SignUpSerializer,
     CustomTokenObtainPairSerializer,
+    LookupCuentaSerializer
 )
 
 

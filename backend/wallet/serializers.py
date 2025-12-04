@@ -25,6 +25,31 @@ from .models import (
     KYCVerification,
 )
 
+class NotificacionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notificacion
+        fields = [
+            "id",
+            "titulo",
+            "cuerpo",
+            "prioridad",
+            "tipo",
+            "creado_en",
+            "leida",
+        ]
+
+        # Fields the user should never set manually
+        read_only_fields = [
+            "id",
+            "titulo",
+            "cuerpo",
+            "prioridad",
+            "tipo",
+            "creado_en",
+        ]
+
+        
+        write_only_fields = ["leida"]
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,18 +116,6 @@ class PagoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pago
         fields = "__all__"
-
-
-        read_only_fields = [
-            "id",
-            "titulo",
-            "cuerpo",
-            "prioridad",
-            "tipo",
-            "creado_en",
-        ]
-
-        write_only_fields = ["leida"]
 
 
 class CuentaSerializer(serializers.ModelSerializer):
